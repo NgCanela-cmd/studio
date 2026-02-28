@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from 'react';
@@ -25,7 +26,12 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft }: LaC
             <p className="text-muted-foreground mb-4 font-medium">Esperando equipo...</p>
             <Button 
               variant="outline" 
-              onClick={() => onTriggerDraft(state.gameType === 'ELIMINATOR' ? 10 : 5)}
+              onClick={() => {
+                // Si no hay equipo A ni B, necesitamos 10 jugadores. 
+                // Si ya hay uno (el ganador), solo 5 para el rival.
+                const count = (!teamA && !teamB) ? 10 : 5;
+                onTriggerDraft(count);
+              }}
               className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
             >
               Realizar Draft
@@ -96,7 +102,6 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft }: LaC
         </div>
       </header>
 
-      {/* THE THRONE SECTION */}
       <div className={cn(
         "rounded-2xl p-6 transition-all duration-500 min-h-[160px] flex items-center justify-center overflow-hidden relative",
         kingOnThrone ? "gold-gradient throne-glow" : "bg-card border-2 border-dashed border-border"
@@ -125,7 +130,6 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft }: LaC
         )}
       </div>
 
-      {/* ACTIVE GAME GRID */}
       <div className="flex-1 flex gap-6">
         {renderTeamCard(teamA, 'A')}
         <div className="flex items-center">

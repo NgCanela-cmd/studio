@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -46,25 +47,29 @@ export default function Dashboard() {
   };
 
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
-    const newTeamA: Team = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: teamAName,
-      players: teamAPlayers,
-      wins: 0,
-    };
-    const newTeamB: Team = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: teamBName,
-      players: teamBPlayers,
-      wins: 0,
-    };
+    setState(prev => {
+      // Si ya hay un equipo A (ganador que se queda), lo preservamos con sus victorias
+      const finalTeamA: Team = prev.teamA ? prev.teamA : {
+        id: Math.random().toString(36).substr(2, 9),
+        name: teamAName,
+        players: teamAPlayers,
+        wins: 0,
+      };
 
-    setState(prev => ({
-      ...prev,
-      teamA: newTeamA,
-      teamB: newTeamB,
-      queue: prev.queue.slice(draftPool.length),
-    }));
+      const finalTeamB: Team = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: teamBName,
+        players: teamBPlayers,
+        wins: 0,
+      };
+
+      return {
+        ...prev,
+        teamA: finalTeamA,
+        teamB: finalTeamB,
+        queue: prev.queue.slice(draftPool.length),
+      };
+    });
     setIsDrafting(false);
   };
 
@@ -80,7 +85,6 @@ export default function Dashboard() {
 
     // LOGIC FOR NORMAL GAME
     if (state.gameType === 'NORMAL') {
-      // Check for King transition
       if (updatedWinner.wins >= KING_THRESHOLD_WINS && totalPlayersInSystem >= KING_THRESHOLD_TOTAL_PLAYERS) {
         setState(prev => ({
           ...prev,
@@ -91,33 +95,26 @@ export default function Dashboard() {
           gameType: 'ELIMINATOR'
         }));
       } else {
-        // Winner stays, loser to end of queue, draft 5 new for B
         setState(prev => ({
           ...prev,
           teamA: updatedWinner,
-          teamB: null, // Ready for next draft
+          teamB: null, 
           queue: [...prev.queue, ...loserPlayersToQueue],
         }));
       }
     } 
-    // LOGIC FOR ELIMINATOR
     else if (state.gameType === 'ELIMINATOR') {
-      // Winner becomes Challenger, Loser to end of queue
       setState(prev => ({
         ...prev,
         teamA: updatedWinner,
-        teamB: prev.kingOnThrone, // The King comes down to face the winner
+        teamB: prev.kingOnThrone, 
         kingOnThrone: null,
         queue: [...prev.queue, ...loserPlayersToQueue],
         gameType: 'FINAL'
       }));
     }
-    // LOGIC FOR FINAL
     else if (state.gameType === 'FINAL') {
-      const isKingWinner = winner.id === state.kingOnThrone?.id || (winnerSide === 'B' && state.gameType === 'FINAL'); // Simple check: side B was king
-
       if (winnerSide === 'B') {
-        // King Defended (Side B was the king descending)
         setState(prev => ({
           ...prev,
           teamA: updatedWinner,
@@ -126,7 +123,6 @@ export default function Dashboard() {
           gameType: 'NORMAL'
         }));
       } else {
-        // Golpe de Estado! Winner becomes King, gets 2 wins immediately
         const newKing = { ...updatedWinner, wins: 2 };
         setState(prev => ({
           ...prev,
@@ -142,7 +138,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen w-full bg-background">
-      {/* 60% Left Section: La Cancha */}
       <section className="w-full md:w-3/5 border-r border-border h-full flex flex-col overflow-y-auto custom-scrollbar">
         <LaCancha 
           state={state} 
@@ -151,7 +146,6 @@ export default function Dashboard() {
         />
       </section>
 
-      {/* 40% Right Section: La Banca */}
       <section className="w-full md:w-2/5 h-full flex flex-col overflow-hidden">
         <LaBanca 
           queue={state.queue} 
@@ -168,6 +162,7 @@ export default function Dashboard() {
           onCancel={() => setIsDrafting(false)} 
           onConfirm={finalizeDraft}
           gameType={state.gameType}
+          existingTeamA={state.teamA}
         />
       )}
     </div>
