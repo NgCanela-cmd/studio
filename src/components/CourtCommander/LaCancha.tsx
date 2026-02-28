@@ -21,7 +21,17 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
 
   const renderEmptySlot = (side: 'A' | 'B') => {
     const isInitialGame = !teamA && !teamB;
-    const requiredPlayers = isInitialGame ? 10 : 5;
+    // Si no hay nadie, necesitamos 10 para empezar. Si hay un equipo A, necesitamos 5 para el retador B.
+    const requiredPlayers = side === 'A' && isInitialGame ? 10 : 5;
+
+    // Solo mostramos el botón de draft en el lado que corresponde o en ambos si está vacío
+    const shouldShowDraft = (side === 'A' && isInitialGame) || (side === 'B' && teamA && !teamB);
+
+    if (!shouldShowDraft && !isInitialGame) return (
+      <Card className="flex-1 border-dashed border-border/20 flex items-center justify-center bg-transparent min-h-[400px]">
+         <p className="text-muted-foreground italic text-xs uppercase tracking-widest opacity-20">Esperando draft</p>
+      </Card>
+    );
 
     return (
       <Card className="flex-1 border-dashed border-2 flex items-center justify-center bg-transparent min-h-[400px]">
@@ -31,7 +41,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
             <UserPlus className="absolute -bottom-1 -right-1 h-8 w-8 text-primary" />
           </div>
           <h3 className="text-lg font-bold uppercase tracking-widest mb-1 opacity-50">
-            {side === 'A' ? 'Equipo Principal' : 'Retador'}
+            {isInitialGame ? 'NUEVO PARTIDO' : 'RETADOR'}
           </h3>
           <p className="text-muted-foreground mb-6 text-sm max-w-[200px] mx-auto">
             {isInitialGame 

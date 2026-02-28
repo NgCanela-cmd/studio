@@ -25,7 +25,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const [teamBName, setTeamBName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Si el equipo A está bloqueado (ganador anterior), el equipo B son los 5 del pool.
+  // Si Team A está bloqueado (ganador), el equipo B son los 5 nuevos del pool.
   // Si no está bloqueado (inicio), el equipo B son los que no se eligieron para A de los 10.
   const teamBPlayers = isTeamALocked 
     ? pool 
@@ -47,7 +47,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
       if (!isTeamALocked && teamAPlayers.length === 5) {
         const resultA = await generateAiTeamName({ 
           playerNames: teamAPlayers.map(p => p.name),
-          theme: "Competitivo y audaz"
+          theme: "Dominantes y veteranos"
         });
         setTeamAName(resultA.suggestedNames[0]);
       }
@@ -55,32 +55,33 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
       if (teamBPlayers.length === 5) {
         const resultB = await generateAiTeamName({ 
           playerNames: teamBPlayers.map(p => p.name),
-          theme: "Retadores agresivos"
+          theme: "Retadores hambrientos"
         });
         setTeamBName(resultB.suggestedNames[0]);
       }
     } catch (error) {
-      console.error("AI Error:", error);
-      if (!isTeamALocked) setTeamAName("Alpha Squad");
-      setTeamBName("Bravo Challengers");
+      if (!isTeamALocked && !teamAName) setTeamAName("Alpha Squad");
+      if (!teamBName) setTeamBName("Bravo Challengers");
     } finally {
       setIsGenerating(false);
     }
   };
 
   useEffect(() => {
+    // Si Team A está bloqueado y tenemos el pool de 5 retadores, generamos nombre para B
     if (isTeamALocked && pool.length === 5) {
       handleGenerateNames();
     }
   }, [pool.length]);
 
   useEffect(() => {
+    // Si no está bloqueado (inicio) y ya seleccionamos los 5 del Team A, generamos nombres
     if (!isTeamALocked && teamAPlayers.length === 5 && pool.length === 10) {
       handleGenerateNames();
     }
   }, [teamAPlayers.length]);
 
-  const canConfirm = teamAPlayers.length === 5 && teamBPlayers.length === 5 && teamAName && teamBName;
+  const canConfirm = teamAPlayers.length === 5 && teamBPlayers.length === 5 && (teamAName || isTeamALocked) && teamBName;
 
   return (
     <Dialog open onOpenChange={onCancel}>
@@ -89,7 +90,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
           <DialogTitle className="text-3xl font-black uppercase tracking-tighter flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Sparkles className="text-primary h-8 w-8" />
-              CONFIGURACIÓN DEL ENCUENTRO
+              {isTeamALocked ? "NUEVO DESAFÍO" : "INICIO DE JORNADA"}
             </div>
             <Badge variant="outline" className="text-xs font-black px-4 py-1">{gameType}</Badge>
           </DialogTitle>
@@ -99,8 +100,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
           <div className="w-full md:w-1/2 p-8 border-r border-border overflow-y-auto custom-scrollbar bg-card/20">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                {isTeamALocked ? "RETADORES DISPONIBLES" : "DRAFT DE JUGADORES (ELIGE 5)"}
-                {isTeamALocked && <Badge className="bg-primary/20 text-primary border-0">POOL: {pool.length}</Badge>}
+                {isTeamALocked ? "RETADORES DISPONIBLES" : `DRAFT DE JUGADORES (POOL: ${pool.length})`}
               </h3>
             </div>
             
@@ -119,8 +119,8 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                       isSelectedForA 
                         ? "bg-primary/10 border-primary text-primary shadow-lg shadow-primary/5" 
                         : isForcedB 
-                          ? "bg-secondary/5 border-border text-foreground/40"
-                          : "bg-secondary/20 border-border/50 text-foreground hover:border-primary/50 hover:bg-secondary/40"
+                          ? "bg-secondary/20 border-border text-foreground/80 hover:border-primary/50"
+                          : "bg-secondary/20 border-border/50 text-foreground hover:border-primary/50"
                     )}
                   >
                     <div className="flex items-center gap-4">
@@ -132,7 +132,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                       </div>
                       <span className="font-black text-xl italic tracking-tighter uppercase">{p.name}</span>
                     </div>
-                    {isTeamALocked && <Lock className="h-4 w-4 opacity-20" />}
+                    {isTeamALocked && <ArrowRight className="h-4 w-4 opacity-30 group-hover:translate-x-1 transition-transform" />}
                   </button>
                 );
               })}
@@ -144,13 +144,13 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
               <div className="flex items-center justify-between">
                 <h4 className="font-black uppercase tracking-tighter text-primary flex items-center gap-2 italic">
                   {isTeamALocked ? <Lock className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-                  EQUIPO A {isTeamALocked && "(VENCEDOR)"}
+                  EQUIPO A {isTeamALocked && "(GANADOR)"}
                 </h4>
                 <Badge className="gold-gradient text-[10px] font-black">{teamAPlayers.length} / 5</Badge>
               </div>
               <div className="p-6 bg-background border-2 border-primary/20 rounded-2xl shadow-inner min-h-[120px]">
                 <p className="text-2xl font-black mb-4 italic text-primary uppercase tracking-tighter">
-                  {teamAName || "Seleccionando..."}
+                  {teamAName || (isTeamALocked ? existingTeamA?.name : "Seleccionando...")}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {teamAPlayers.map(p => (
@@ -162,7 +162,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
 
             <div className="flex justify-center h-4 relative">
                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border/50"></div></div>
-               <span className="relative z-10 bg-card px-4 text-[10px] font-black italic opacity-30 tracking-widest">ENFRENTAMIENTO</span>
+               <span className="relative z-10 bg-card px-4 text-[10px] font-black italic opacity-30 tracking-widest uppercase">VS</span>
             </div>
 
             <div className="space-y-4">
@@ -178,8 +178,10 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                   <p className="text-2xl font-black mb-4 italic uppercase tracking-tighter">{teamBName}</p>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <p className="text-sm text-muted-foreground italic font-medium">Generando nombre táctico...</p>
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground italic font-medium">
+                      {teamBPlayers.length === 5 ? "Generando nombre..." : "Faltan jugadores..."}
+                    </p>
+                    {teamBPlayers.length === 5 && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
@@ -193,16 +195,16 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
         </div>
 
         <DialogFooter className="p-8 border-t border-border bg-card/80 backdrop-blur-md">
-          <Button variant="ghost" onClick={onCancel} className="font-black uppercase tracking-widest text-xs">ABORTAR</Button>
+          <Button variant="ghost" onClick={onCancel} className="font-black uppercase tracking-widest text-xs">CANCELAR</Button>
           <Button 
             disabled={!canConfirm || isGenerating}
             onClick={() => onConfirm(teamAPlayers, teamBPlayers, teamAName, teamBName)}
             className="px-12 gold-gradient font-black tracking-widest h-14 text-lg rounded-2xl shadow-xl shadow-primary/20 group"
           >
             {isGenerating ? (
-              <>CALIBRANDO <Loader2 className="ml-2 h-5 w-5 animate-spin" /></>
+              <>CONFIGURANDO <Loader2 className="ml-2 h-5 w-5 animate-spin" /></>
             ) : (
-              <>LANZAR PARTIDO <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-2 transition-transform" /></>
+              <>LANZAR ENCUENTRO <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-2 transition-transform" /></>
             )}
           </Button>
         </DialogFooter>

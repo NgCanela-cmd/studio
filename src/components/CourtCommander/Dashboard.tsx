@@ -24,7 +24,8 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   const saveToHistory = (currentState: GameState) => {
-    setHistory(prev => [...prev, JSON.parse(JSON.stringify(currentState))].slice(-10)); // Guardar últimos 10 movimientos
+    // Clonación profunda para evitar referencias
+    setHistory(prev => [...prev, JSON.parse(JSON.stringify(currentState))].slice(-10));
   };
 
   const undo = () => {
@@ -62,7 +63,7 @@ export default function Dashboard() {
       toast({
         variant: "destructive",
         title: "Jugadores insuficientes",
-        description: `Se necesitan al menos ${count} jugadores en la banca para realizar este draft.`,
+        description: `Se necesitan al menos ${count} jugadores en la banca para realizar este draft. Faltan ${count - state.queue.length}.`,
       });
       return;
     }
@@ -73,8 +74,8 @@ export default function Dashboard() {
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     saveToHistory(state);
     setState(prev => {
-      // Si ya hay un ganador esperando (teamA), lo mantenemos. Si no, creamos uno nuevo.
-      const finalTeamA: Team = prev.teamA ? prev.teamA : {
+      // Si el equipo A ya existe (ganador anterior), lo mantenemos intacto
+      const finalTeamA: Team = prev.teamA ? { ...prev.teamA } : {
         id: Math.random().toString(36).substr(2, 9),
         name: teamAName,
         players: teamAPlayers,
@@ -106,6 +107,7 @@ export default function Dashboard() {
     if (!winner || !loser) return;
 
     saveToHistory(state);
+    
     const updatedWinner = { ...winner, wins: winner.wins + 1 };
     const loserPlayersToQueue = loser.players;
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
