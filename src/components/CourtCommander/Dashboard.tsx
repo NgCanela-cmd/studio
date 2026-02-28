@@ -18,9 +18,25 @@ const INITIAL_STATE: GameState = {
 
 export default function Dashboard() {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
+  const [history, setHistory] = useState<GameState[]>([]);
   const [isDrafting, setIsDrafting] = useState(false);
   const [draftPool, setDraftPool] = useState<Player[]>([]);
   const { toast } = useToast();
+
+  const saveToHistory = (currentState: GameState) => {
+    setHistory(prev => [...prev, JSON.parse(JSON.stringify(currentState))].slice(-10)); // Guardar últimos 10 movimientos
+  };
+
+  const undo = () => {
+    if (history.length === 0) return;
+    const previousState = history[history.length - 1];
+    setState(previousState);
+    setHistory(prev => prev.slice(0, -1));
+    toast({
+      title: "Acción revertida",
+      description: "Se ha restaurado el estado anterior de la partida.",
+    });
+  };
 
   const addPlayer = (name: string) => {
     const newPlayer: Player = {
@@ -55,9 +71,9 @@ export default function Dashboard() {
   };
 
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
+    saveToHistory(state);
     setState(prev => {
-      // IMPORTANTE: Si ya existe un equipo A (el ganador que se quedó), lo usamos para preservar sus victorias e ID.
-      // Si no existe (primera partida), creamos uno nuevo.
+      // Si ya hay un ganador esperando (teamA), lo mantenemos. Si no, creamos uno nuevo.
       const finalTeamA: Team = prev.teamA ? prev.teamA : {
         id: Math.random().toString(36).substr(2, 9),
         name: teamAName,
@@ -89,6 +105,7 @@ export default function Dashboard() {
 
     if (!winner || !loser) return;
 
+    saveToHistory(state);
     const updatedWinner = { ...winner, wins: winner.wins + 1 };
     const loserPlayersToQueue = loser.players;
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
@@ -152,6 +169,8 @@ export default function Dashboard() {
           state={state} 
           onDeclareWinner={declareWinner} 
           onTriggerDraft={triggerDraft}
+          onUndo={undo}
+          canUndo={history.length > 0}
         />
       </section>
 

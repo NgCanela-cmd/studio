@@ -5,21 +5,21 @@ import React from 'react';
 import { GameState, Team } from '@/lib/game-types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Crown, Trophy, Swords, Users, UserPlus } from 'lucide-react';
+import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LaCanchaProps {
   state: GameState;
   onDeclareWinner: (side: 'A' | 'B') => void;
   onTriggerDraft: (count: number) => void;
+  onUndo: () => void;
+  canUndo: boolean;
 }
 
-export default function LaCancha({ state, onDeclareWinner, onTriggerDraft }: LaCanchaProps) {
+export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, canUndo }: LaCanchaProps) {
   const { teamA, teamB, kingOnThrone, gameType } = state;
 
   const renderEmptySlot = (side: 'A' | 'B') => {
-    // Si la cancha está totalmente vacía, el botón de cualquiera de los dos lados pide 10.
-    // Si el equipo A ya está presente, el slot B pide 5.
     const isInitialGame = !teamA && !teamB;
     const requiredPlayers = isInitialGame ? 10 : 5;
 
@@ -107,11 +107,25 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft }: LaC
             </p>
           </div>
         </div>
-        <div className="px-4 py-2 bg-accent/20 border border-accent/30 rounded-full flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-          <span className="text-accent font-black tracking-tighter uppercase text-xs">
-            {gameType}
-          </span>
+
+        <div className="flex items-center gap-4">
+          {canUndo && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onUndo}
+              className="border-primary/50 text-primary hover:bg-primary/10 font-black italic tracking-tighter gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              DESHACER
+            </Button>
+          )}
+          <div className="px-4 py-2 bg-accent/20 border border-accent/30 rounded-full flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+            <span className="text-accent font-black tracking-tighter uppercase text-xs">
+              {gameType}
+            </span>
+          </div>
         </div>
       </header>
 
