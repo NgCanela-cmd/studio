@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -7,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { generateAiTeamName } from '@/ai/flows/ai-team-name-generator';
-import { Sparkles, Loader2, ArrowRight, Lock, Users } from 'lucide-react';
+import { Sparkles, Loader2, ArrowRight, Lock, Users, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DraftModalProps {
@@ -20,13 +19,14 @@ interface DraftModalProps {
 
 export default function DraftModal({ pool, gameType, existingTeamA, onCancel, onConfirm }: DraftModalProps) {
   const isTeamALocked = !!existingTeamA;
+  // Un equipo se considera "promovido" si acaba de ganar como retador (tiene exactamente 1 victoria)
+  const isNewlyPromoted = existingTeamA?.wins === 1;
+  
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>(existingTeamA?.players || []);
   const [teamAName, setTeamAName] = useState(existingTeamA?.name || '');
   const [teamBName, setTeamBName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Si Team A está bloqueado (ganador), el equipo B son los 5 nuevos del pool.
-  // Si no está bloqueado (inicio), el equipo B son los que no se eligieron para A de los 10.
   const teamBPlayers = isTeamALocked 
     ? pool 
     : pool.filter(p => !teamAPlayers.find(tp => tp.id === p.id));
@@ -44,10 +44,11 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const handleGenerateNames = async () => {
     setIsGenerating(true);
     try {
-      if (!isTeamALocked && teamAPlayers.length === 5) {
+      // Si el equipo A es nuevo o acaba de ser promovido tras ganar como retador
+      if (!isTeamALocked || (isNewlyPromoted && teamAPlayers.length === 5)) {
         const resultA = await generateAiTeamName({ 
           playerNames: teamAPlayers.map(p => p.name),
-          theme: "Dominantes y veteranos"
+          theme: "Dominantes, veteranos, reyes de la pista, escuadrón alfa"
         });
         setTeamAName(resultA.suggestedNames[0]);
       }
@@ -55,12 +56,12 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
       if (teamBPlayers.length === 5) {
         const resultB = await generateAiTeamName({ 
           playerNames: teamBPlayers.map(p => p.name),
-          theme: "Retadores hambrientos"
+          theme: "Retadores, jóvenes promesas, bravo challengers, hambrientos"
         });
         setTeamBName(resultB.suggestedNames[0]);
       }
     } catch (error) {
-      if (!isTeamALocked && !teamAName) setTeamAName("Alpha Squad");
+      if (!teamAName) setTeamAName("Alpha Squad");
       if (!teamBName) setTeamBName("Bravo Challengers");
     } finally {
       setIsGenerating(false);
@@ -68,20 +69,16 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   };
 
   useEffect(() => {
-    // Si Team A está bloqueado y tenemos el pool de 5 retadores, generamos nombre para B
-    if (isTeamALocked && pool.length === 5) {
-      handleGenerateNames();
+    if (pool.length === 5 || pool.length === 10) {
+      if (!isTeamALocked || (isNewlyPromoted && !isGenerating && teamAName === existingTeamA?.name)) {
+        handleGenerateNames();
+      } else if (isTeamALocked && teamBName === '') {
+        handleGenerateNames();
+      }
     }
-  }, [pool.length]);
+  }, [pool.length, teamAPlayers.length]);
 
-  useEffect(() => {
-    // Si no está bloqueado (inicio) y ya seleccionamos los 5 del Team A, generamos nombres
-    if (!isTeamALocked && teamAPlayers.length === 5 && pool.length === 10) {
-      handleGenerateNames();
-    }
-  }, [teamAPlayers.length]);
-
-  const canConfirm = teamAPlayers.length === 5 && teamBPlayers.length === 5 && (teamAName || isTeamALocked) && teamBName;
+  const canConfirm = teamAPlayers.length === 5 && teamBPlayers.length === 5 && teamAName && teamBName;
 
   return (
     <Dialog open onOpenChange={onCancel}>
@@ -92,7 +89,14 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
               <Sparkles className="text-primary h-8 w-8" />
               {isTeamALocked ? "NUEVO DESAFÍO" : "INICIO DE JORNADA"}
             </div>
-            <Badge variant="outline" className="text-xs font-black px-4 py-1">{gameType}</Badge>
+            <div className="flex gap-2">
+              {isNewlyPromoted && (
+                <Badge className="bg-green-500/20 text-green-500 border-green-500/30 flex gap-1 items-center px-4">
+                  <TrendingUp className="h-3 w-3" /> PROMOCIÓN ALPHA
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs font-black px-4 py-1">{gameType}</Badge>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -150,7 +154,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
               </div>
               <div className="p-6 bg-background border-2 border-primary/20 rounded-2xl shadow-inner min-h-[120px]">
                 <p className="text-2xl font-black mb-4 italic text-primary uppercase tracking-tighter">
-                  {teamAName || (isTeamALocked ? existingTeamA?.name : "Seleccionando...")}
+                  {teamAName || "Asignando nombre..."}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {teamAPlayers.map(p => (
@@ -202,7 +206,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
             className="px-12 gold-gradient font-black tracking-widest h-14 text-lg rounded-2xl shadow-xl shadow-primary/20 group"
           >
             {isGenerating ? (
-              <>CONFIGURANDO <Loader2 className="ml-2 h-5 w-5 animate-spin" /></>
+              <>PREPARANDO <Loader2 className="ml-2 h-5 w-5 animate-spin" /></>
             ) : (
               <>LANZAR ENCUENTRO <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-2 transition-transform" /></>
             )}

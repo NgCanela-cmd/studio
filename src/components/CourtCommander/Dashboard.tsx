@@ -65,7 +65,7 @@ export default function Dashboard() {
       toast({
         variant: "destructive",
         title: "Jugadores insuficientes",
-        description: `Se necesitan al menos ${count} jugadores en la banca para realizar este draft. Faltan ${count - state.queue.length}.`,
+        description: `Se necesitan al menos ${count} jugadores en la banca. Faltan ${count - state.queue.length}.`,
       });
       return;
     }
@@ -76,7 +76,8 @@ export default function Dashboard() {
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     saveToHistory(state);
     setState(prev => {
-      const finalTeamA: Team = prev.teamA ? { ...prev.teamA } : {
+      // Si ya hay un equipo A (ganador previo), mantenemos su objeto pero permitimos actualizar el nombre si fue "promovido"
+      const finalTeamA: Team = prev.teamA ? { ...prev.teamA, name: teamAName } : {
         id: Math.random().toString(36).substr(2, 9),
         name: teamAName,
         players: teamAPlayers,
@@ -187,6 +188,11 @@ export default function Dashboard() {
         }
       }
       return nextState;
+    });
+
+    toast({
+      title: "Victoria Registrada",
+      description: `¡${winner.name} ha ganado el encuentro!`,
     });
   };
 
