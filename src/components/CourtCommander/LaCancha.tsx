@@ -27,8 +27,8 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft }: LaC
             <Button 
               variant="outline" 
               onClick={() => {
-                // Si no hay equipo A ni B, necesitamos 10 jugadores. 
-                // Si ya hay uno (el ganador), solo 5 para el rival.
+                // Si la cancha está vacía por completo, pedimos 10 para formar ambos.
+                // Si ya hay un equipo A, solo pedimos 5 para el retador (B).
                 const count = (!teamA && !teamB) ? 10 : 5;
                 onTriggerDraft(count);
               }}

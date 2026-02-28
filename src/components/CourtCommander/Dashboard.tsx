@@ -4,9 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import LaCancha from './LaCancha';
 import LaBanca from './LaBanca';
-import { GameState, Player, Team, GameType, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS, TEAM_SIZE, ELIMINATOR_POOL_SIZE } from '@/lib/game-types';
+import { GameState, Player, Team, GameType, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS, TEAM_SIZE } from '@/lib/game-types';
 import DraftModal from './DraftModal';
-import { Crown } from 'lucide-react';
 
 const INITIAL_STATE: GameState = {
   queue: [],
@@ -48,7 +47,7 @@ export default function Dashboard() {
 
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     setState(prev => {
-      // Si ya hay un equipo A (ganador que se queda), lo preservamos con sus victorias
+      // Si ya teníamos un equipo A (el ganador que se quedó), lo mantenemos tal cual con sus victorias
       const finalTeamA: Team = prev.teamA ? prev.teamA : {
         id: Math.random().toString(36).substr(2, 9),
         name: teamAName,
@@ -71,6 +70,7 @@ export default function Dashboard() {
       };
     });
     setIsDrafting(false);
+    setDraftPool([]);
   };
 
   const declareWinner = (winnerSide: 'A' | 'B') => {
@@ -83,7 +83,7 @@ export default function Dashboard() {
     const loserPlayersToQueue = loser.players;
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
 
-    // LOGIC FOR NORMAL GAME
+    // Lógica para decidir el siguiente estado basado en victorias y jugadores totales
     if (state.gameType === 'NORMAL') {
       if (updatedWinner.wins >= KING_THRESHOLD_WINS && totalPlayersInSystem >= KING_THRESHOLD_TOTAL_PLAYERS) {
         setState(prev => ({
