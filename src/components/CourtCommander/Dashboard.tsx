@@ -1,11 +1,12 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import LaCancha from './LaCancha';
 import LaBanca from './LaBanca';
-import { GameState, Player, Team, GameType, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS, TEAM_SIZE } from '@/lib/game-types';
+import { GameState, Player, Team, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS } from '@/lib/game-types';
 import DraftModal from './DraftModal';
+import { useToast } from '@/hooks/use-toast';
 
 const INITIAL_STATE: GameState = {
   queue: [],
@@ -19,6 +20,7 @@ export default function Dashboard() {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isDrafting, setIsDrafting] = useState(false);
   const [draftPool, setDraftPool] = useState<Player[]>([]);
+  const { toast } = useToast();
 
   const addPlayer = (name: string) => {
     const newPlayer: Player = {
@@ -40,14 +42,22 @@ export default function Dashboard() {
   };
 
   const triggerDraft = (count: number) => {
-    if (state.queue.length < count) return;
+    if (state.queue.length < count) {
+      toast({
+        variant: "destructive",
+        title: "Jugadores insuficientes",
+        description: `Se necesitan al menos ${count} jugadores en la banca para realizar este draft.`,
+      });
+      return;
+    }
     setDraftPool(state.queue.slice(0, count));
     setIsDrafting(true);
   };
 
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     setState(prev => {
-      // Si ya teníamos un equipo A (el ganador que se quedó), lo mantenemos tal cual con sus victorias
+      // IMPORTANTE: Si ya existe un equipo A (el ganador que se quedó), lo usamos para preservar sus victorias e ID.
+      // Si no existe (primera partida), creamos uno nuevo.
       const finalTeamA: Team = prev.teamA ? prev.teamA : {
         id: Math.random().toString(36).substr(2, 9),
         name: teamAName,
@@ -83,7 +93,6 @@ export default function Dashboard() {
     const loserPlayersToQueue = loser.players;
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
 
-    // Lógica para decidir el siguiente estado basado en victorias y jugadores totales
     if (state.gameType === 'NORMAL') {
       if (updatedWinner.wins >= KING_THRESHOLD_WINS && totalPlayersInSystem >= KING_THRESHOLD_TOTAL_PLAYERS) {
         setState(prev => ({

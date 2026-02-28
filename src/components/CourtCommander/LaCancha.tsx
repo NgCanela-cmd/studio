@@ -5,7 +5,7 @@ import React from 'react';
 import { GameState, Team } from '@/lib/game-types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Crown, Trophy, Swords, Users } from 'lucide-react';
+import { Crown, Trophy, Swords, Users, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LaCanchaProps {
@@ -17,63 +17,75 @@ interface LaCanchaProps {
 export default function LaCancha({ state, onDeclareWinner, onTriggerDraft }: LaCanchaProps) {
   const { teamA, teamB, kingOnThrone, gameType } = state;
 
-  const renderTeamCard = (team: Team | null, side: 'A' | 'B') => {
-    if (!team) {
-      return (
-        <Card className="flex-1 border-dashed border-2 flex items-center justify-center bg-transparent">
-          <div className="text-center p-8">
-            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-            <p className="text-muted-foreground mb-4 font-medium">Esperando equipo...</p>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                // Si la cancha está vacía por completo, pedimos 10 para formar ambos.
-                // Si ya hay un equipo A, solo pedimos 5 para el retador (B).
-                const count = (!teamA && !teamB) ? 10 : 5;
-                onTriggerDraft(count);
-              }}
-              className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
-            >
-              Realizar Draft
-            </Button>
-          </div>
-        </Card>
-      );
-    }
+  const renderEmptySlot = (side: 'A' | 'B') => {
+    // Si la cancha está totalmente vacía, el botón de cualquiera de los dos lados pide 10.
+    // Si el equipo A ya está presente, el slot B pide 5.
+    const isInitialGame = !teamA && !teamB;
+    const requiredPlayers = isInitialGame ? 10 : 5;
 
+    return (
+      <Card className="flex-1 border-dashed border-2 flex items-center justify-center bg-transparent min-h-[400px]">
+        <div className="text-center p-8">
+          <div className="relative inline-block mb-4">
+            <Users className="h-16 w-16 text-muted-foreground opacity-20" />
+            <UserPlus className="absolute -bottom-1 -right-1 h-8 w-8 text-primary" />
+          </div>
+          <h3 className="text-lg font-bold uppercase tracking-widest mb-1 opacity-50">
+            {side === 'A' ? 'Equipo Principal' : 'Retador'}
+          </h3>
+          <p className="text-muted-foreground mb-6 text-sm max-w-[200px] mx-auto">
+            {isInitialGame 
+              ? "Cancha vacía. Inicia un draft de 10 jugadores." 
+              : "Esperando un nuevo equipo para desafiar al ganador."}
+          </p>
+          <Button 
+            onClick={() => onTriggerDraft(requiredPlayers)}
+            className="px-8 gold-gradient font-black tracking-widest h-12 shadow-xl hover:scale-105 transition-transform"
+          >
+            REALIZAR DRAFT ({requiredPlayers})
+          </Button>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderTeamCard = (team: Team, side: 'A' | 'B') => {
     const isKing = team.id === kingOnThrone?.id || (gameType === 'FINAL' && side === 'B');
 
     return (
       <Card className={cn(
-        "flex-1 relative overflow-hidden transition-all duration-300",
+        "flex-1 relative overflow-hidden transition-all duration-300 min-h-[400px]",
         isKing ? "border-primary border-2 throne-glow" : "border-border"
       )}>
         <CardContent className="p-6 flex flex-col h-full">
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <h3 className="text-3xl font-bold tracking-tight mb-1">{team.name}</h3>
-              <div className="flex items-center gap-2 text-primary font-bold">
-                <Trophy className="h-5 w-5" />
-                <span>{team.wins} {team.wins === 1 ? 'Victoria' : 'Victorias'}</span>
+              <h3 className="text-3xl font-black italic tracking-tighter mb-1 uppercase text-primary leading-none">{team.name}</h3>
+              <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm">
+                <Trophy className="h-4 w-4" />
+                <span>{team.wins} {team.wins === 1 ? 'Victoria' : 'Victorias'} consecutivas</span>
               </div>
             </div>
-            {isKing && <Crown className="h-10 w-10 text-primary animate-pulse" />}
+            {isKing && <Crown className="h-10 w-10 text-primary animate-bounce" />}
           </div>
 
           <div className="space-y-2 mb-8 flex-1">
             {team.players.map((p, idx) => (
-              <div key={p.id} className="flex items-center gap-3 p-2 rounded-md bg-secondary/50 text-lg">
-                <span className="text-primary/60 font-mono text-sm">{idx + 1}</span>
-                <span className="font-medium">{p.name}</span>
+              <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 text-lg group hover:bg-secondary/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-primary/40 font-black text-xs w-4">{idx + 1}</span>
+                  <span className="font-bold tracking-tight">{p.name}</span>
+                </div>
+                <div className="h-2 w-2 rounded-full bg-primary/20 group-hover:bg-primary transition-colors" />
               </div>
             ))}
           </div>
 
           <Button 
-            className="w-full py-8 text-2xl font-black rounded-xl gold-gradient shadow-lg hover:scale-[1.02] transition-transform"
+            className="w-full py-10 text-3xl font-black rounded-2xl gold-gradient shadow-2xl hover:scale-[1.03] active:scale-95 transition-all border-b-4 border-black/20"
             onClick={() => onDeclareWinner(side)}
           >
-            DECLARAR GANADOR
+            VICTORIA
           </Button>
         </CardContent>
         {isKing && <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rotate-45 translate-x-12 -translate-y-12" />}
@@ -83,61 +95,66 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft }: LaC
 
   return (
     <div className="p-6 flex flex-col h-full gap-6">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between bg-card/50 p-4 rounded-2xl border border-border">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center">
-            <Swords className="text-background" />
+          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+            <Swords className="text-background h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-black uppercase tracking-widest text-primary">La Cancha</h1>
-            <p className="text-muted-foreground text-sm font-medium tracking-tight">
-              SISTEMA DE GESTIÓN EN TIEMPO REAL
+            <h1 className="text-2xl font-black uppercase tracking-tighter text-primary leading-none">La Cancha</h1>
+            <p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">
+              Live Battle Management
             </p>
           </div>
         </div>
-        <div className="px-4 py-2 bg-accent/20 border border-accent/30 rounded-full">
-          <span className="text-accent font-black tracking-tighter uppercase text-sm">
-            Estado: {gameType}
+        <div className="px-4 py-2 bg-accent/20 border border-accent/30 rounded-full flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+          <span className="text-accent font-black tracking-tighter uppercase text-xs">
+            {gameType}
           </span>
         </div>
       </header>
 
       <div className={cn(
-        "rounded-2xl p-6 transition-all duration-500 min-h-[160px] flex items-center justify-center overflow-hidden relative",
-        kingOnThrone ? "gold-gradient throne-glow" : "bg-card border-2 border-dashed border-border"
+        "rounded-3xl p-8 transition-all duration-500 min-h-[160px] flex items-center justify-center overflow-hidden relative border-2",
+        kingOnThrone ? "gold-gradient throne-glow border-primary/50" : "bg-card/30 border-dashed border-border"
       )}>
         {kingOnThrone ? (
           <>
             <div className="relative z-10 flex flex-col items-center">
-              <div className="flex items-center gap-3 mb-2">
-                <Crown className="h-8 w-8 text-background" />
-                <h2 className="text-3xl font-black text-background uppercase tracking-tight">El Rey en el Trono</h2>
+              <div className="flex items-center gap-4 mb-3">
+                <Crown className="h-10 w-10 text-background" />
+                <h2 className="text-4xl font-black text-background uppercase tracking-tighter italic">Rey del Trono</h2>
               </div>
-              <p className="text-background/80 font-bold text-xl">{kingOnThrone.name}</p>
-              <div className="mt-4 flex gap-2">
+              <p className="text-background font-black text-2xl uppercase tracking-widest">{kingOnThrone.name}</p>
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
                 {kingOnThrone.players.map(p => (
-                   <span key={p.id} className="px-2 py-1 bg-background/20 rounded text-background text-xs font-bold">{p.name}</span>
+                   <span key={p.id} className="px-3 py-1 bg-background/20 rounded-full text-background text-[10px] font-black uppercase border border-background/20">{p.name}</span>
                 ))}
               </div>
             </div>
-            <Crown className="absolute -right-4 -bottom-4 h-48 w-48 text-background/10 -rotate-12" />
+            <Crown className="absolute -right-8 -bottom-8 h-64 w-64 text-background/10 -rotate-12" />
           </>
         ) : (
           <div className="text-center">
-            <Crown className="mx-auto h-12 w-12 text-muted-foreground opacity-30 mb-2" />
-            <p className="text-muted-foreground font-semibold uppercase tracking-widest">Trono Vacante</p>
+            <Crown className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-2" />
+            <p className="text-muted-foreground font-black uppercase tracking-widest text-xs opacity-50">Trono Disponible</p>
           </div>
         )}
       </div>
 
-      <div className="flex-1 flex gap-6">
-        {renderTeamCard(teamA, 'A')}
-        <div className="flex items-center">
-          <div className="h-16 w-16 rounded-full bg-border flex items-center justify-center">
-            <span className="font-black text-2xl italic">VS</span>
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch">
+        {teamA ? renderTeamCard(teamA, 'A') : renderEmptySlot('A')}
+        
+        <div className="flex flex-row lg:flex-col items-center justify-center gap-4">
+          <div className="h-px w-full lg:w-px lg:h-full bg-border" />
+          <div className="h-16 w-16 rounded-full bg-card border-2 border-border flex items-center justify-center shadow-inner relative z-10">
+            <span className="font-black text-2xl italic tracking-tighter text-muted-foreground">VS</span>
           </div>
+          <div className="h-px w-full lg:w-px lg:h-full bg-border" />
         </div>
-        {renderTeamCard(teamB, 'B')}
+
+        {teamB ? renderTeamCard(teamB, 'B') : renderEmptySlot('B')}
       </div>
     </div>
   );
