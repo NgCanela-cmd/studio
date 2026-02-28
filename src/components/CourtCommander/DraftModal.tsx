@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -19,7 +20,9 @@ interface DraftModalProps {
 
 export default function DraftModal({ pool, gameType, existingTeamA, onCancel, onConfirm }: DraftModalProps) {
   const isTeamALocked = !!existingTeamA;
-  // Un equipo se considera "promovido" si acaba de ganar como retador (tiene exactamente 1 victoria)
+  
+  // Un equipo se considera "promovido" si acaba de ganar como retador (tiene victorias > 0 y acaba de entrar al slot A)
+  // Usamos wins === 1 como indicador de que acaba de ganar su primer partido como retador
   const isNewlyPromoted = existingTeamA?.wins === 1;
   
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>(existingTeamA?.players || []);
@@ -27,6 +30,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const [teamBName, setTeamBName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // El pool contiene o 10 jugadores (si no hay equipo A) o 5 jugadores (si el equipo A ya está en cancha)
   const teamBPlayers = isTeamALocked 
     ? pool 
     : pool.filter(p => !teamAPlayers.find(tp => tp.id === p.id));
@@ -44,19 +48,20 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const handleGenerateNames = async () => {
     setIsGenerating(true);
     try {
-      // Si el equipo A es nuevo o acaba de ser promovido tras ganar como retador
-      if (!isTeamALocked || (isNewlyPromoted && teamAPlayers.length === 5)) {
+      // Generar nombre para A si es nuevo o si acaba de ser promovido
+      if (!isTeamALocked || isNewlyPromoted) {
         const resultA = await generateAiTeamName({ 
           playerNames: teamAPlayers.map(p => p.name),
-          theme: "Dominantes, veteranos, reyes de la pista, escuadrón alfa"
+          theme: "Dominantes, veteranos, reyes de la pista, escuadrón alfa, campeones"
         });
         setTeamAName(resultA.suggestedNames[0]);
       }
       
+      // Siempre generar nombre para el equipo B (los retadores)
       if (teamBPlayers.length === 5) {
         const resultB = await generateAiTeamName({ 
           playerNames: teamBPlayers.map(p => p.name),
-          theme: "Retadores, jóvenes promesas, bravo challengers, hambrientos"
+          theme: "Retadores, jóvenes promesas, bravo challengers, hambrientos, aspirantes"
         });
         setTeamBName(resultB.suggestedNames[0]);
       }
@@ -68,15 +73,12 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
     }
   };
 
+  // Solo disparamos la generación inicial si el pool está listo
   useEffect(() => {
-    if (pool.length === 5 || pool.length === 10) {
-      if (!isTeamALocked || (isNewlyPromoted && !isGenerating && teamAName === existingTeamA?.name)) {
-        handleGenerateNames();
-      } else if (isTeamALocked && teamBName === '') {
-        handleGenerateNames();
-      }
+    if (pool.length > 0) {
+      handleGenerateNames();
     }
-  }, [pool.length, teamAPlayers.length]);
+  }, [pool.length]);
 
   const canConfirm = teamAPlayers.length === 5 && teamBPlayers.length === 5 && teamAName && teamBName;
 
@@ -104,7 +106,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
           <div className="w-full md:w-1/2 p-8 border-r border-border overflow-y-auto custom-scrollbar bg-card/20">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                {isTeamALocked ? "RETADORES DISPONIBLES" : `DRAFT DE JUGADORES (POOL: ${pool.length})`}
+                {isTeamALocked ? "RETADORES DISPONIBLES (B)" : `DRAFT DE JUGADORES (POOL: ${pool.length})`}
               </h3>
             </div>
             
@@ -123,7 +125,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                       isSelectedForA 
                         ? "bg-primary/10 border-primary text-primary shadow-lg shadow-primary/5" 
                         : isForcedB 
-                          ? "bg-secondary/20 border-border text-foreground/80 hover:border-primary/50"
+                          ? "bg-secondary/20 border-border text-foreground/80"
                           : "bg-secondary/20 border-border/50 text-foreground hover:border-primary/50"
                     )}
                   >
@@ -136,7 +138,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                       </div>
                       <span className="font-black text-xl italic tracking-tighter uppercase">{p.name}</span>
                     </div>
-                    {isTeamALocked && <ArrowRight className="h-4 w-4 opacity-30 group-hover:translate-x-1 transition-transform" />}
+                    {!isTeamALocked && <ArrowRight className="h-4 w-4 opacity-30 group-hover:translate-x-1 transition-transform" />}
                   </button>
                 );
               })}
@@ -148,7 +150,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
               <div className="flex items-center justify-between">
                 <h4 className="font-black uppercase tracking-tighter text-primary flex items-center gap-2 italic">
                   {isTeamALocked ? <Lock className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-                  EQUIPO A {isTeamALocked && "(GANADOR)"}
+                  EQUIPO A {isTeamALocked && "(GANADOR ACTUAL)"}
                 </h4>
                 <Badge className="gold-gradient text-[10px] font-black">{teamAPlayers.length} / 5</Badge>
               </div>
