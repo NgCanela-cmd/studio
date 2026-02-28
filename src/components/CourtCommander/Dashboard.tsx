@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import LaCancha from './LaCancha';
 import LaBanca from './LaBanca';
-import { GameState, Player, Team, Match, PlayerStat, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS } from '@/lib/game-types';
+import { GameState, Player, Team, Match, GameType, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS } from '@/lib/game-types';
 import DraftModal from './DraftModal';
 import StatsModal from './StatsModal';
 import { useToast } from '@/hooks/use-toast';
@@ -38,7 +38,7 @@ export default function Dashboard() {
     setHistory(prev => prev.slice(0, -1));
     toast({
       title: "Acción revertida",
-      description: "Se ha restaurado el estado anterior de la partida.",
+      description: "Se ha restaurado el estado anterior.",
     });
   };
 
@@ -66,7 +66,7 @@ export default function Dashboard() {
       toast({
         variant: "destructive",
         title: "Jugadores insuficientes",
-        description: `Se necesitan al menos ${count} jugadores en la banca. Faltan ${count - state.queue.length}.`,
+        description: `Necesitas ${count} jugadores en la banca. Faltan ${count - state.queue.length}.`,
       });
       return;
     }
@@ -77,7 +77,6 @@ export default function Dashboard() {
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     saveToHistory(state);
     setState(prev => {
-      // Si el equipo A ya existía (ganador previo), mantenemos sus victorias pero actualizamos el nombre si cambió
       const existingTeamA = prev.teamA;
       const finalTeamA: Team = existingTeamA ? { 
         ...existingTeamA, 
@@ -109,25 +108,28 @@ export default function Dashboard() {
   };
 
   const declareWinner = (winnerSide: 'A' | 'B') => {
-    const winner = winnerSide === 'A' ? state.teamA : state.teamB;
-    const loser = winnerSide === 'A' ? state.teamB : state.teamA;
+    const currentTeamA = state.teamA;
+    const currentTeamB = state.teamB;
+    
+    if (!currentTeamA || !currentTeamB) return;
 
-    if (!winner || !loser) return;
+    const winner = winnerSide === 'A' ? currentTeamA : currentTeamB;
+    const loser = winnerSide === 'A' ? currentTeamB : currentTeamA;
 
     saveToHistory(state);
     
-    const updatedWinner = { ...winner, wins: winner.wins + 1 };
-    const loserPlayersToQueue = loser.players;
-    const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
-
-    // Guardar el nombre original para las estadísticas antes de cualquier cambio de slot
-    const newMatch: Match = {
+    // Capturar nombres actuales ANTES de la transición para las estadísticas
+    const matchRecord: Match = {
       id: Math.random().toString(36).substr(2, 9),
-      teamAName: state.teamA!.name,
-      teamBName: state.teamB!.name,
+      teamAName: currentTeamA.name,
+      teamBName: currentTeamB.name,
       winnerName: winner.name,
       timestamp: Date.now(),
     };
+
+    const updatedWinner = { ...winner, wins: winner.wins + 1 };
+    const loserPlayersToQueue = loser.players;
+    const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
 
     const newPlayerStats = { ...state.playerStats };
     winner.players.forEach(player => {
@@ -140,12 +142,10 @@ export default function Dashboard() {
     setState(prev => {
       let nextState = {
         ...prev,
-        matches: [newMatch, ...prev.matches],
+        matches: [matchRecord, ...prev.matches],
         playerStats: newPlayerStats,
       };
 
-      // Si el ganador es B, ahora pasa a ser el equipo A para el siguiente partido
-      // Independientemente de si es NORMAL, ELIMINATOR o FINAL, el ganador siempre queda en Team A
       if (prev.gameType === 'NORMAL') {
         if (updatedWinner.wins >= KING_THRESHOLD_WINS && totalPlayersInSystem >= KING_THRESHOLD_TOTAL_PLAYERS) {
           nextState = {
@@ -157,9 +157,10 @@ export default function Dashboard() {
             gameType: 'ELIMINATOR'
           };
         } else {
+          // El ganador (sea A o B) SIEMPRE pasa a ser el nuevo Equipo A
           nextState = {
             ...nextState,
-            teamA: updatedWinner, // El ganador (sea A o B) se queda en el slot A
+            teamA: updatedWinner,
             teamB: null, 
             queue: [...prev.queue, ...loserPlayersToQueue],
           };
@@ -177,7 +178,6 @@ export default function Dashboard() {
       }
       else if (prev.gameType === 'FINAL') {
         if (winnerSide === 'B') {
-          // Si el retador B gana la final, se convierte en el nuevo equipo A normal
           nextState = {
             ...nextState,
             teamA: updatedWinner,
@@ -186,7 +186,6 @@ export default function Dashboard() {
             gameType: 'NORMAL'
           };
         } else {
-          // Si el Rey gana la final, vuelve al trono con 2 victorias (ya sumó una)
           const newKing = { ...updatedWinner };
           nextState = {
             ...nextState,
@@ -203,7 +202,7 @@ export default function Dashboard() {
 
     toast({
       title: "Victoria Registrada",
-      description: `¡${winner.name} ha ganado el encuentro!`,
+      description: `¡${winner.name} ha ganado!`,
     });
   };
 

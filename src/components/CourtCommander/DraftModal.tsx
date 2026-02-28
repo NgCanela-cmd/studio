@@ -21,8 +21,8 @@ interface DraftModalProps {
 export default function DraftModal({ pool, gameType, existingTeamA, onCancel, onConfirm }: DraftModalProps) {
   const isTeamALocked = !!existingTeamA;
   
-  // Un equipo se considera "promovido" si acaba de ganar como retador (tiene victorias > 0 y acaba de entrar al slot A)
-  // Usamos wins === 1 como indicador de que acaba de ganar su primer partido como retador
+  // Un equipo se considera recién "promovido" si acaba de ganar como retador
+  // Identificamos esto si wins es 1 o si el usuario quiere regenerar el nombre tras ganar
   const isNewlyPromoted = existingTeamA?.wins === 1;
   
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>(existingTeamA?.players || []);
@@ -30,7 +30,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const [teamBName, setTeamBName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // El pool contiene o 10 jugadores (si no hay equipo A) o 5 jugadores (si el equipo A ya está en cancha)
+  // Pool contiene 10 para nuevo partido o 5 para retador B
   const teamBPlayers = isTeamALocked 
     ? pool 
     : pool.filter(p => !teamAPlayers.find(tp => tp.id === p.id));
@@ -48,11 +48,11 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const handleGenerateNames = async () => {
     setIsGenerating(true);
     try {
-      // Generar nombre para A si es nuevo o si acaba de ser promovido
+      // Si el equipo A es nuevo o acaba de ser promovido de B a A, generamos nombre Alpha
       if (!isTeamALocked || isNewlyPromoted) {
         const resultA = await generateAiTeamName({ 
           playerNames: teamAPlayers.map(p => p.name),
-          theme: "Dominantes, veteranos, reyes de la pista, escuadrón alfa, campeones"
+          theme: "Reyes del trono, escuadrón dominante, alphas de la cancha, campeones veteranos"
         });
         setTeamAName(resultA.suggestedNames[0]);
       }
@@ -61,19 +61,18 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
       if (teamBPlayers.length === 5) {
         const resultB = await generateAiTeamName({ 
           playerNames: teamBPlayers.map(p => p.name),
-          theme: "Retadores, jóvenes promesas, bravo challengers, hambrientos, aspirantes"
+          theme: "Nuevos retadores, jóvenes promesas, aspirantes hambrientos, challengers"
         });
         setTeamBName(resultB.suggestedNames[0]);
       }
     } catch (error) {
-      if (!teamAName) setTeamAName("Alpha Squad");
-      if (!teamBName) setTeamBName("Bravo Challengers");
+      if (!teamAName) setTeamAName("Dominant Force");
+      if (!teamBName) setTeamBName("Hungry Challengers");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Solo disparamos la generación inicial si el pool está listo
   useEffect(() => {
     if (pool.length > 0) {
       handleGenerateNames();
@@ -94,7 +93,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
             <div className="flex gap-2">
               {isNewlyPromoted && (
                 <Badge className="bg-green-500/20 text-green-500 border-green-500/30 flex gap-1 items-center px-4">
-                  <TrendingUp className="h-3 w-3" /> PROMOCIÓN ALPHA
+                  <TrendingUp className="h-3 w-3" /> PROMOCIÓN ALFA
                 </Badge>
               )}
               <Badge variant="outline" className="text-xs font-black px-4 py-1">{gameType}</Badge>
@@ -104,95 +103,70 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
 
         <div className="flex flex-col md:flex-row h-[550px]">
           <div className="w-full md:w-1/2 p-8 border-r border-border overflow-y-auto custom-scrollbar bg-card/20">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                {isTeamALocked ? "RETADORES DISPONIBLES (B)" : `DRAFT DE JUGADORES (POOL: ${pool.length})`}
-              </h3>
-            </div>
+            <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-6">
+              {isTeamALocked ? "RETADORES DISPONIBLES" : "DRAFT DE JUGADORES"}
+            </h3>
             
             <div className="grid grid-cols-1 gap-3">
               {pool.map((p) => {
                 const isSelectedForA = teamAPlayers.find(tp => tp.id === p.id);
-                const isForcedB = isTeamALocked;
-                
                 return (
                   <button
                     key={p.id}
                     disabled={isTeamALocked}
                     onClick={() => togglePlayer(p)}
                     className={cn(
-                      "flex items-center justify-between p-5 rounded-2xl border-2 transition-all text-left group",
+                      "flex items-center justify-between p-5 rounded-2xl border-2 transition-all",
                       isSelectedForA 
-                        ? "bg-primary/10 border-primary text-primary shadow-lg shadow-primary/5" 
-                        : isForcedB 
-                          ? "bg-secondary/20 border-border text-foreground/80"
-                          : "bg-secondary/20 border-border/50 text-foreground hover:border-primary/50"
+                        ? "bg-primary/10 border-primary text-primary" 
+                        : "bg-secondary/20 border-border text-foreground hover:border-primary/50"
                     )}
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center font-black text-sm border-2",
-                        isSelectedForA ? "bg-primary text-background border-primary" : "bg-card border-border"
+                        "h-10 w-10 rounded-full flex items-center justify-center font-black",
+                        isSelectedForA ? "bg-primary text-background" : "bg-card border-border border-2"
                       )}>
                         {isSelectedForA ? "A" : "B"}
                       </div>
-                      <span className="font-black text-xl italic tracking-tighter uppercase">{p.name}</span>
+                      <span className="font-black text-xl italic uppercase tracking-tighter">{p.name}</span>
                     </div>
-                    {!isTeamALocked && <ArrowRight className="h-4 w-4 opacity-30 group-hover:translate-x-1 transition-transform" />}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="w-full md:w-1/2 p-8 bg-card/40 flex flex-col gap-8 overflow-y-auto custom-scrollbar">
+          <div className="w-full md:w-1/2 p-8 bg-card/40 flex flex-col gap-8">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-black uppercase tracking-tighter text-primary flex items-center gap-2 italic">
-                  {isTeamALocked ? <Lock className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-                  EQUIPO A {isTeamALocked && "(GANADOR ACTUAL)"}
-                </h4>
-                <Badge className="gold-gradient text-[10px] font-black">{teamAPlayers.length} / 5</Badge>
-              </div>
-              <div className="p-6 bg-background border-2 border-primary/20 rounded-2xl shadow-inner min-h-[120px]">
+              <h4 className="font-black uppercase tracking-tighter text-primary flex items-center gap-2 italic">
+                {isTeamALocked ? <Lock className="h-4 w-4" /> : <Users className="h-4 w-4" />}
+                EQUIPO A (DEFENSOR)
+              </h4>
+              <div className="p-6 bg-background border-2 border-primary/20 rounded-2xl">
                 <p className="text-2xl font-black mb-4 italic text-primary uppercase tracking-tighter">
                   {teamAName || "Asignando nombre..."}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {teamAPlayers.map(p => (
-                    <Badge key={p.id} variant="secondary" className="font-bold text-[10px] px-3 py-1 bg-secondary/50 border-0">{p.name}</Badge>
+                    <Badge key={p.id} variant="secondary" className="font-bold text-[10px]">{p.name}</Badge>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-center h-4 relative">
-               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border/50"></div></div>
-               <span className="relative z-10 bg-card px-4 text-[10px] font-black italic opacity-30 tracking-widest uppercase">VS</span>
-            </div>
-
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-black uppercase tracking-tighter text-muted-foreground flex items-center gap-2 italic">
-                  <Users className="h-4 w-4" />
-                  EQUIPO B (RETADOR)
-                </h4>
-                <Badge variant="outline" className="text-[10px] font-black">{teamBPlayers.length} / 5</Badge>
-              </div>
-              <div className="p-6 bg-background border-2 border-border/50 rounded-2xl shadow-inner min-h-[120px]">
-                {teamBName ? (
-                  <p className="text-2xl font-black mb-4 italic uppercase tracking-tighter">{teamBName}</p>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <p className="text-sm text-muted-foreground italic font-medium">
-                      {teamBPlayers.length === 5 ? "Generando nombre..." : "Faltan jugadores..."}
-                    </p>
-                    {teamBPlayers.length === 5 && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                  </div>
-                )}
+              <h4 className="font-black uppercase tracking-tighter text-muted-foreground flex items-center gap-2 italic">
+                <Users className="h-4 w-4" />
+                EQUIPO B (RETADOR)
+              </h4>
+              <div className="p-6 bg-background border-2 border-border/50 rounded-2xl">
+                <p className="text-2xl font-black mb-4 italic uppercase tracking-tighter">
+                  {teamBName || (teamBPlayers.length === 5 ? "Generando..." : "Faltan jugadores...")}
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {teamBPlayers.map(p => (
-                    <Badge key={p.id} variant="secondary" className="font-bold text-[10px] px-3 py-1 bg-secondary/50 border-0">{p.name}</Badge>
+                    <Badge key={p.id} variant="secondary" className="font-bold text-[10px]">{p.name}</Badge>
                   ))}
                 </div>
               </div>
@@ -200,18 +174,14 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
           </div>
         </div>
 
-        <DialogFooter className="p-8 border-t border-border bg-card/80 backdrop-blur-md">
+        <DialogFooter className="p-8 border-t border-border bg-card/80">
           <Button variant="ghost" onClick={onCancel} className="font-black uppercase tracking-widest text-xs">CANCELAR</Button>
           <Button 
             disabled={!canConfirm || isGenerating}
             onClick={() => onConfirm(teamAPlayers, teamBPlayers, teamAName, teamBName)}
-            className="px-12 gold-gradient font-black tracking-widest h-14 text-lg rounded-2xl shadow-xl shadow-primary/20 group"
+            className="px-12 gold-gradient font-black tracking-widest h-14 text-lg rounded-2xl"
           >
-            {isGenerating ? (
-              <>PREPARANDO <Loader2 className="ml-2 h-5 w-5 animate-spin" /></>
-            ) : (
-              <>LANZAR ENCUENTRO <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-2 transition-transform" /></>
-            )}
+            {isGenerating ? "PREPARANDO..." : "LANZAR ENCUENTRO"}
           </Button>
         </DialogFooter>
       </DialogContent>

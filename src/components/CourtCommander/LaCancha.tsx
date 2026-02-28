@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from 'react';
@@ -40,14 +41,9 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
           <h3 className="text-lg font-bold uppercase tracking-widest mb-1 opacity-50">
             {isInitialGame ? 'NUEVO PARTIDO' : 'RETADOR'}
           </h3>
-          <p className="text-muted-foreground mb-6 text-sm max-w-[200px] mx-auto">
-            {isInitialGame 
-              ? "Cancha vacía. Inicia un draft de 10 jugadores." 
-              : "Esperando un nuevo equipo para desafiar al ganador."}
-          </p>
           <Button 
             onClick={() => onTriggerDraft(requiredPlayers)}
-            className="px-8 gold-gradient font-black tracking-widest h-12 shadow-xl hover:scale-105 transition-transform"
+            className="px-8 gold-gradient font-black tracking-widest h-12 shadow-xl"
           >
             REALIZAR DRAFT ({requiredPlayers})
           </Button>
@@ -70,7 +66,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
               <h3 className="text-3xl font-black italic tracking-tighter mb-1 uppercase text-primary leading-none">{team.name}</h3>
               <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm">
                 <Trophy className="h-4 w-4" />
-                <span>{team.wins} {team.wins === 1 ? 'Victoria' : 'Victorias'} consecutivas</span>
+                <span>{team.wins} {team.wins === 1 ? 'Victoria' : 'Victorias'}</span>
               </div>
             </div>
             {isKing && <Crown className="h-10 w-10 text-primary animate-bounce" />}
@@ -78,24 +74,22 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
 
           <div className="space-y-2 mb-8 flex-1">
             {team.players.map((p, idx) => (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 text-lg group hover:bg-secondary/50 transition-colors">
+              <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 text-lg">
                 <div className="flex items-center gap-3">
                   <span className="text-primary/40 font-black text-xs w-4">{idx + 1}</span>
                   <span className="font-bold tracking-tight">{p.name}</span>
                 </div>
-                <div className="h-2 w-2 rounded-full bg-primary/20 group-hover:bg-primary transition-colors" />
               </div>
             ))}
           </div>
 
           <Button 
-            className="w-full py-10 text-3xl font-black rounded-2xl gold-gradient shadow-2xl hover:scale-[1.03] active:scale-95 transition-all border-b-4 border-black/20"
+            className="w-full py-10 text-3xl font-black rounded-2xl gold-gradient"
             onClick={() => onDeclareWinner(side)}
           >
             VICTORIA
           </Button>
         </CardContent>
-        {isKing && <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rotate-45 translate-x-12 -translate-y-12" />}
       </Card>
     );
   };
@@ -104,7 +98,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
     <div className="p-6 flex flex-col h-full gap-6">
       <header className="flex items-center justify-between bg-card/50 p-4 rounded-2xl border border-border">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg">
             <Swords className="text-background h-7 w-7" />
           </div>
           <div>
@@ -150,21 +144,13 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
         kingOnThrone ? "gold-gradient throne-glow border-primary/50" : "bg-card/30 border-dashed border-border"
       )}>
         {kingOnThrone ? (
-          <>
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="flex items-center gap-4 mb-3">
-                <Crown className="h-10 w-10 text-background" />
-                <h2 className="text-4xl font-black text-background uppercase tracking-tighter italic">Rey del Trono</h2>
-              </div>
-              <p className="text-background font-black text-2xl uppercase tracking-widest">{kingOnThrone.name}</p>
-              <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {kingOnThrone.players.map(p => (
-                   <span key={p.id} className="px-3 py-1 bg-background/20 rounded-full text-background text-[10px] font-black uppercase border border-background/20">{p.name}</span>
-                ))}
-              </div>
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="flex items-center gap-4 mb-3">
+              <Crown className="h-10 w-10 text-background" />
+              <h2 className="text-4xl font-black text-background uppercase tracking-tighter italic">Rey del Trono</h2>
             </div>
-            <Crown className="absolute -right-8 -bottom-8 h-64 w-64 text-background/10 -rotate-12" />
-          </>
+            <p className="text-background font-black text-2xl uppercase tracking-widest">{kingOnThrone.name}</p>
+          </div>
         ) : (
           <div className="text-center">
             <Crown className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-2" />
