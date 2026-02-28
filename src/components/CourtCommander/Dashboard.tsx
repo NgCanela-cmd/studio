@@ -1,11 +1,11 @@
-
 "use client"
 
 import React, { useState } from 'react';
 import LaCancha from './LaCancha';
 import LaBanca from './LaBanca';
-import { GameState, Player, Team, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS } from '@/lib/game-types';
+import { GameState, Player, Team, Match, PlayerStat, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS } from '@/lib/game-types';
 import DraftModal from './DraftModal';
+import StatsModal from './StatsModal';
 import { useToast } from '@/hooks/use-toast';
 
 const INITIAL_STATE: GameState = {
@@ -14,17 +14,19 @@ const INITIAL_STATE: GameState = {
   teamB: null,
   kingOnThrone: null,
   gameType: 'NORMAL',
+  matches: [],
+  playerStats: {},
 };
 
 export default function Dashboard() {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [history, setHistory] = useState<GameState[]>([]);
   const [isDrafting, setIsDrafting] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [draftPool, setDraftPool] = useState<Player[]>([]);
   const { toast } = useToast();
 
   const saveToHistory = (currentState: GameState) => {
-    // Clonación profunda para evitar referencias
     setHistory(prev => [...prev, JSON.parse(JSON.stringify(currentState))].slice(-10));
   };
 
@@ -74,7 +76,6 @@ export default function Dashboard() {
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     saveToHistory(state);
     setState(prev => {
-      // Si el equipo A ya existe (ganador anterior), lo mantenemos intacto
       const finalTeamA: Team = prev.teamA ? { ...prev.teamA } : {
         id: Math.random().toString(36).substr(2, 9),
         name: teamAName,
@@ -112,56 +113,81 @@ export default function Dashboard() {
     const loserPlayersToQueue = loser.players;
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
 
-    if (state.gameType === 'NORMAL') {
-      if (updatedWinner.wins >= KING_THRESHOLD_WINS && totalPlayersInSystem >= KING_THRESHOLD_TOTAL_PLAYERS) {
-        setState(prev => ({
-          ...prev,
-          kingOnThrone: updatedWinner,
-          teamA: null,
-          teamB: null,
-          queue: [...prev.queue, ...loserPlayersToQueue],
-          gameType: 'ELIMINATOR'
-        }));
-      } else {
-        setState(prev => ({
-          ...prev,
-          teamA: updatedWinner,
-          teamB: null, 
-          queue: [...prev.queue, ...loserPlayersToQueue],
-        }));
+    const newMatch: Match = {
+      id: Math.random().toString(36).substr(2, 9),
+      teamAName: winnerSide === 'A' ? winner.name : loser.name,
+      teamBName: winnerSide === 'A' ? loser.name : winner.name,
+      winnerName: winner.name,
+      timestamp: Date.now(),
+    };
+
+    const newPlayerStats = { ...state.playerStats };
+    winner.players.forEach(player => {
+      if (!newPlayerStats[player.id]) {
+        newPlayerStats[player.id] = { id: player.id, name: player.name, wins: 0 };
       }
-    } 
-    else if (state.gameType === 'ELIMINATOR') {
-      setState(prev => ({
+      newPlayerStats[player.id].wins += 1;
+    });
+
+    setState(prev => {
+      let nextState = {
         ...prev,
-        teamA: updatedWinner,
-        teamB: prev.kingOnThrone, 
-        kingOnThrone: null,
-        queue: [...prev.queue, ...loserPlayersToQueue],
-        gameType: 'FINAL'
-      }));
-    }
-    else if (state.gameType === 'FINAL') {
-      if (winnerSide === 'B') {
-        setState(prev => ({
-          ...prev,
+        matches: [newMatch, ...prev.matches],
+        playerStats: newPlayerStats,
+      };
+
+      if (prev.gameType === 'NORMAL') {
+        if (updatedWinner.wins >= KING_THRESHOLD_WINS && totalPlayersInSystem >= KING_THRESHOLD_TOTAL_PLAYERS) {
+          nextState = {
+            ...nextState,
+            kingOnThrone: updatedWinner,
+            teamA: null,
+            teamB: null,
+            queue: [...prev.queue, ...loserPlayersToQueue],
+            gameType: 'ELIMINATOR'
+          };
+        } else {
+          nextState = {
+            ...nextState,
+            teamA: updatedWinner,
+            teamB: null, 
+            queue: [...prev.queue, ...loserPlayersToQueue],
+          };
+        }
+      } 
+      else if (prev.gameType === 'ELIMINATOR') {
+        nextState = {
+          ...nextState,
           teamA: updatedWinner,
-          teamB: null,
+          teamB: prev.kingOnThrone, 
+          kingOnThrone: null,
           queue: [...prev.queue, ...loserPlayersToQueue],
-          gameType: 'NORMAL'
-        }));
-      } else {
-        const newKing = { ...updatedWinner, wins: 2 };
-        setState(prev => ({
-          ...prev,
-          kingOnThrone: newKing,
-          teamA: null,
-          teamB: null,
-          queue: [...prev.queue, ...loserPlayersToQueue],
-          gameType: 'ELIMINATOR'
-        }));
+          gameType: 'FINAL'
+        };
       }
-    }
+      else if (prev.gameType === 'FINAL') {
+        if (winnerSide === 'B') {
+          nextState = {
+            ...nextState,
+            teamA: updatedWinner,
+            teamB: null,
+            queue: [...prev.queue, ...loserPlayersToQueue],
+            gameType: 'NORMAL'
+          };
+        } else {
+          const newKing = { ...updatedWinner, wins: 2 };
+          nextState = {
+            ...nextState,
+            kingOnThrone: newKing,
+            teamA: null,
+            teamB: null,
+            queue: [...prev.queue, ...loserPlayersToQueue],
+            gameType: 'ELIMINATOR'
+          };
+        }
+      }
+      return nextState;
+    });
   };
 
   return (
@@ -172,6 +198,7 @@ export default function Dashboard() {
           onDeclareWinner={declareWinner} 
           onTriggerDraft={triggerDraft}
           onUndo={undo}
+          onOpenStats={() => setIsStatsOpen(true)}
           canUndo={history.length > 0}
         />
       </section>
@@ -193,6 +220,14 @@ export default function Dashboard() {
           onConfirm={finalizeDraft}
           gameType={state.gameType}
           existingTeamA={state.teamA}
+        />
+      )}
+
+      {isStatsOpen && (
+        <StatsModal 
+          matches={state.matches} 
+          playerStats={Object.values(state.playerStats)} 
+          onClose={() => setIsStatsOpen(false)} 
         />
       )}
     </div>

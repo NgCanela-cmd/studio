@@ -13,12 +13,28 @@ export type Team = {
 
 export type GameType = 'NORMAL' | 'ELIMINATOR' | 'FINAL';
 
+export type Match = {
+  id: string;
+  teamAName: string;
+  teamBName: string;
+  winnerName: string;
+  timestamp: number;
+};
+
+export type PlayerStat = {
+  id: string;
+  name: string;
+  wins: number;
+};
+
 export type GameState = {
   queue: Player[];
   teamA: Team | null;
   teamB: Team | null;
   kingOnThrone: Team | null;
   gameType: GameType;
+  matches: Match[];
+  playerStats: Record<string, PlayerStat>;
 };
 
 export const KING_THRESHOLD_WINS = 2;

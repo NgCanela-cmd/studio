@@ -1,11 +1,10 @@
-
 "use client"
 
 import React from 'react';
 import { GameState, Team } from '@/lib/game-types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw } from 'lucide-react';
+import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LaCanchaProps {
@@ -13,18 +12,16 @@ interface LaCanchaProps {
   onDeclareWinner: (side: 'A' | 'B') => void;
   onTriggerDraft: (count: number) => void;
   onUndo: () => void;
+  onOpenStats: () => void;
   canUndo: boolean;
 }
 
-export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, canUndo }: LaCanchaProps) {
+export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, onOpenStats, canUndo }: LaCanchaProps) {
   const { teamA, teamB, kingOnThrone, gameType } = state;
 
   const renderEmptySlot = (side: 'A' | 'B') => {
     const isInitialGame = !teamA && !teamB;
-    // Si no hay nadie, necesitamos 10 para empezar. Si hay un equipo A, necesitamos 5 para el retador B.
     const requiredPlayers = side === 'A' && isInitialGame ? 10 : 5;
-
-    // Solo mostramos el botón de draft en el lado que corresponde o en ambos si está vacío
     const shouldShowDraft = (side === 'A' && isInitialGame) || (side === 'B' && teamA && !teamB);
 
     if (!shouldShowDraft && !isInitialGame) return (
@@ -113,12 +110,21 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tighter text-primary leading-none">La Cancha</h1>
             <p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">
-              Live Battle Management
+              GESTIÓN DE BATALLAS EN VIVO
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onOpenStats}
+            className="text-muted-foreground hover:text-primary font-black italic tracking-tighter gap-2"
+          >
+            <BarChart3 className="h-4 w-4" />
+            ESTADÍSTICAS
+          </Button>
           {canUndo && (
             <Button 
               variant="outline" 
