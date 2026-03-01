@@ -4,7 +4,6 @@ Este es un sistema de gestión de ligas de baloncesto en tiempo real tipo "Rey d
 
 ## Características actualizadas:
 - **Gestión de Batallas en Vivo**: Interfaz táctica para manejar partidos 5vs5.
-- **Draft con IA**: Los nombres de los equipos son generados dinámicamente según su estatus (Challengers vs Alphas).
 - **Estadísticas Completas**: Historial de partidos y ranking individual de victorias.
 - **Sistema de Deshacer**: Botón para corregir errores al marcar ganadores.
 
