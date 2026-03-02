@@ -77,6 +77,7 @@ export default function Dashboard() {
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     saveToHistory(state);
     setState(prev => {
+      // Si ya hay un equipo A (ganador previo), mantenemos su ID y victorias
       const existingTeamA = prev.teamA;
       const finalTeamA: Team = existingTeamA ? { 
         ...existingTeamA, 
@@ -118,7 +119,6 @@ export default function Dashboard() {
 
     saveToHistory(state);
     
-    // Capturar nombres actuales ANTES de la transición para las estadísticas
     const matchRecord: Match = {
       id: Math.random().toString(36).substr(2, 9),
       teamAName: currentTeamA.name,
@@ -157,7 +157,7 @@ export default function Dashboard() {
             gameType: 'ELIMINATOR'
           };
         } else {
-          // El ganador (sea A o B) SIEMPRE pasa a ser el nuevo Equipo A
+          // El ganador SIEMPRE pasa a ser el nuevo Equipo A y se limpia el slot B
           nextState = {
             ...nextState,
             teamA: updatedWinner,
