@@ -61,6 +61,30 @@ export default function Dashboard() {
     }));
   };
 
+  const updatePlayer = (id: string, newName: string) => {
+    setState(prev => ({
+      ...prev,
+      queue: prev.queue.map(p => p.id === id ? { ...p, name: newName } : p),
+    }));
+  };
+
+  const movePlayer = (id: string, direction: 'up' | 'down') => {
+    setState(prev => {
+      const index = prev.queue.findIndex(p => p.id === id);
+      if (index === -1) return prev;
+      
+      const newQueue = [...prev.queue];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      
+      if (targetIndex < 0 || targetIndex >= newQueue.length) return prev;
+      
+      // Swap elements
+      [newQueue[index], newQueue[targetIndex]] = [newQueue[targetIndex], newQueue[index]];
+      
+      return { ...prev, queue: newQueue };
+    });
+  };
+
   const triggerDraft = (count: number) => {
     if (state.queue.length < count) {
       toast({
@@ -77,7 +101,6 @@ export default function Dashboard() {
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     saveToHistory(state);
     setState(prev => {
-      // Si ya hay un equipo A (ganador previo), mantenemos su ID y victorias
       const existingTeamA = prev.teamA;
       const finalTeamA: Team = existingTeamA ? { 
         ...existingTeamA, 
@@ -157,7 +180,6 @@ export default function Dashboard() {
             gameType: 'ELIMINATOR'
           };
         } else {
-          // El ganador SIEMPRE pasa a ser el nuevo Equipo A y se limpia el slot B
           nextState = {
             ...nextState,
             teamA: updatedWinner,
@@ -224,6 +246,8 @@ export default function Dashboard() {
           queue={state.queue} 
           onAddPlayer={addPlayer} 
           onRemovePlayer={removePlayer} 
+          onUpdatePlayer={updatePlayer}
+          onMovePlayer={movePlayer}
           isDrafting={isDrafting}
           totalInSystem={state.queue.length + (state.teamA ? 5 : 0) + (state.teamB ? 5 : 0) + (state.kingOnThrone ? 5 : 0)}
         />
