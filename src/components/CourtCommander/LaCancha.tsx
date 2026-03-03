@@ -6,7 +6,9 @@ import { GameState, Team, Player } from '@/lib/game-types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw, BarChart3, Pencil, Check, X } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw, BarChart3, Pencil, Check, X, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LaCanchaProps {
@@ -16,11 +18,12 @@ interface LaCanchaProps {
   onUndo: () => void;
   onOpenStats: () => void;
   onUpdatePlayer: (teamId: string, playerId: string, newName: string) => void;
+  onSubstitutePlayer: (teamId: string, currentPlayerId: string, substituteId: string) => void;
   canUndo: boolean;
 }
 
-export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, onOpenStats, onUpdatePlayer, canUndo }: LaCanchaProps) {
-  const { teamA, teamB, kingOnThrone, gameType } = state;
+export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, onOpenStats, onUpdatePlayer, onSubstitutePlayer, canUndo }: LaCanchaProps) {
+  const { teamA, teamB, kingOnThrone, gameType, queue } = state;
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -72,6 +75,85 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
     );
   };
 
+  const renderPlayerRow = (p: Player, idx: number, teamId: string) => (
+    <div key={p.id} className="group flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 text-lg">
+      <div className="flex items-center gap-3 flex-1 overflow-hidden">
+        <span className="text-primary/40 font-black text-xs w-4 shrink-0">{idx + 1}</span>
+        {editingPlayerId === p.id ? (
+          <div className="flex items-center gap-2 flex-1">
+            <Input 
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="h-8 bg-background border-primary text-sm font-bold"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEditing(teamId);
+                if (e.key === 'Escape') cancelEditing();
+              }}
+            />
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => saveEditing(teamId)}>
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-accent" onClick={cancelEditing}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <span className="font-bold tracking-tight truncate">{p.name}</span>
+        )}
+      </div>
+      
+      {editingPlayerId !== p.id && (
+        <div className="flex items-center gap-1">
+          {/* Sustitución Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-green-500 transition-opacity"
+              >
+                <ArrowLeftRight className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-0 bg-card border-border shadow-2xl rounded-2xl overflow-hidden" align="end">
+              <div className="p-3 border-b border-border bg-secondary/20">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sustituir por:</p>
+              </div>
+              <ScrollArea className="h-48">
+                <div className="p-1">
+                  {queue.length === 0 ? (
+                    <p className="p-4 text-xs text-center text-muted-foreground italic">No hay jugadores en la banca</p>
+                  ) : (
+                    queue.map((benchPlayer) => (
+                      <button
+                        key={benchPlayer.id}
+                        onClick={() => onSubstitutePlayer(teamId, p.id, benchPlayer.id)}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"
+                      >
+                        <span className="font-bold text-sm truncate">{benchPlayer.name}</span>
+                        <ArrowLeftRight className="h-3 w-3 opacity-30" />
+                      </button>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity"
+            onClick={() => startEditing(p)}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
   const renderTeamCard = (team: Team, side: 'A' | 'B') => {
     const isKing = team.id === kingOnThrone?.id || (gameType === 'FINAL' && side === 'B');
 
@@ -93,45 +175,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
           </div>
 
           <div className="space-y-2 mb-8 flex-1">
-            {team.players.map((p, idx) => (
-              <div key={p.id} className="group flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 text-lg">
-                <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                  <span className="text-primary/40 font-black text-xs w-4 shrink-0">{idx + 1}</span>
-                  {editingPlayerId === p.id ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <Input 
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="h-8 bg-background border-primary text-sm font-bold"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEditing(team.id);
-                          if (e.key === 'Escape') cancelEditing();
-                        }}
-                      />
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => saveEditing(team.id)}>
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-accent" onClick={cancelEditing}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="font-bold tracking-tight truncate">{p.name}</span>
-                  )}
-                </div>
-                {editingPlayerId !== p.id && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity"
-                    onClick={() => startEditing(p)}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-            ))}
+            {team.players.map((p, idx) => renderPlayerRow(p, idx, team.id))}
           </div>
 
           <Button 
@@ -163,7 +207,6 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
         </div>
         <p className="text-background font-black text-2xl uppercase tracking-widest mb-4 italic text-center">{kingOnThrone.name}</p>
         
-        {/* Lista de jugadores del trono editables */}
         <div className="flex flex-wrap justify-center gap-2 w-full">
           {kingOnThrone.players.map(p => (
             <div key={p.id} className="group relative flex items-center bg-background/20 backdrop-blur-sm rounded-full px-4 py-1 border border-background/30">
@@ -184,10 +227,36 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
               ) : (
                 <>
                   <span className="text-[11px] font-black text-background uppercase">{p.name}</span>
-                  <Pencil 
-                    className="h-3 w-3 ml-2 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" 
-                    onClick={() => startEditing(p)}
-                  />
+                  <div className="flex items-center gap-1 ml-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <ArrowLeftRight className="h-3 w-3 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-0 bg-card border-border shadow-2xl rounded-2xl overflow-hidden" align="center">
+                        <div className="p-3 border-b border-border bg-secondary/20">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-left">Sustituir por:</p>
+                        </div>
+                        <ScrollArea className="h-48">
+                          <div className="p-1">
+                            {queue.map((benchPlayer) => (
+                              <button
+                                key={benchPlayer.id}
+                                onClick={() => onSubstitutePlayer(kingOnThrone.id, p.id, benchPlayer.id)}
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"
+                              >
+                                <span className="font-bold text-sm truncate">{benchPlayer.name}</span>
+                                <ArrowLeftRight className="h-3 w-3 opacity-30" />
+                              </button>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </PopoverContent>
+                    </Popover>
+                    <Pencil 
+                      className="h-3 w-3 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" 
+                      onClick={() => startEditing(p)}
+                    />
+                  </div>
                 </>
               )}
             </div>

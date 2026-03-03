@@ -90,6 +90,51 @@ export default function Dashboard() {
     });
   };
 
+  const substitutePlayer = (teamId: string, currentPlayerId: string, substituteId: string) => {
+    saveToHistory(state);
+    setState(prev => {
+      const subIndex = prev.queue.findIndex(p => p.id === substituteId);
+      if (subIndex === -1) return prev;
+
+      const substitutePlayer = prev.queue[subIndex];
+      let replacedPlayer: Player | null = null;
+
+      const updateTeam = (team: Team | null) => {
+        if (!team || team.id !== teamId) return team;
+        const players = team.players.map(p => {
+          if (p.id === currentPlayerId) {
+            replacedPlayer = p;
+            return substitutePlayer;
+          }
+          return p;
+        });
+        return { ...team, players };
+      };
+
+      const newTeamA = updateTeam(prev.teamA);
+      const newTeamB = updateTeam(prev.teamB);
+      const newKing = updateTeam(prev.kingOnThrone);
+
+      if (!replacedPlayer) return prev;
+
+      const newQueue = [...prev.queue];
+      newQueue[subIndex] = replacedPlayer;
+
+      return {
+        ...prev,
+        teamA: newTeamA,
+        teamB: newTeamB,
+        kingOnThrone: newKing,
+        queue: newQueue
+      };
+    });
+
+    toast({
+      title: "Sustitución Exitosa",
+      description: "Los jugadores han intercambiado posiciones y turnos.",
+    });
+  };
+
   const movePlayer = (id: string, direction: 'up' | 'down') => {
     setState(prev => {
       const index = prev.queue.findIndex(p => p.id === id);
@@ -251,7 +296,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
-      {/* Botón flotante para abrir la banca en móvil (aprox 8 pulgadas o menos) */}
       <div className="lg:hidden fixed bottom-6 right-6 z-50">
         <Sheet>
           <SheetTrigger asChild>
@@ -281,6 +325,7 @@ export default function Dashboard() {
           onUndo={undo}
           onOpenStats={() => setIsStatsOpen(true)}
           onUpdatePlayer={updateInGamePlayer}
+          onSubstitutePlayer={substitutePlayer}
           canUndo={history.length > 0}
         />
       </section>
