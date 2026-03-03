@@ -7,7 +7,7 @@ import { GameState, Player, Team, Match, KING_THRESHOLD_WINS, KING_THRESHOLD_TOT
 import DraftModal from './DraftModal';
 import StatsModal from './StatsModal';
 import { useToast } from '@/hooks/use-toast';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 
@@ -367,6 +367,10 @@ export default function Dashboard() {
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="p-0 w-full sm:max-w-md bg-background border-l border-border">
+            <SheetHeader className="sr-only">
+              <SheetTitle>La Banca</SheetTitle>
+              <SheetDescription>Gestión de la cola de espera de jugadores</SheetDescription>
+            </SheetHeader>
             <LaBanca 
               queue={state.queue} 
               onAddPlayer={addPlayer} 
