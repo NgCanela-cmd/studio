@@ -1,16 +1,15 @@
-
 "use client"
 
 import React, { useState } from 'react';
 import LaCancha from './LaCancha';
 import LaBanca from './LaBanca';
-import { GameState, Player, Team, Match, GameType, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS } from '@/lib/game-types';
+import { GameState, Player, Team, Match, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS } from '@/lib/game-types';
 import DraftModal from './DraftModal';
 import StatsModal from './StatsModal';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Users, Menu } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 const INITIAL_STATE: GameState = {
   queue: [],
@@ -20,6 +19,7 @@ const INITIAL_STATE: GameState = {
   gameType: 'NORMAL',
   matches: [],
   playerStats: {},
+  nextTicketNumber: 1,
 };
 
 export default function Dashboard() {
@@ -46,14 +46,15 @@ export default function Dashboard() {
   };
 
   const addPlayer = (name: string) => {
-    const newPlayer: Player = {
-      id: Math.random().toString(36).substr(2, 9),
-      name,
-      registeredAt: Date.now(),
-    };
     setState(prev => ({
       ...prev,
-      queue: [...prev.queue, newPlayer],
+      queue: [...prev.queue, {
+        id: Math.random().toString(36).substr(2, 9),
+        name,
+        registeredAt: Date.now(),
+        ticketNumber: prev.nextTicketNumber,
+      }],
+      nextTicketNumber: prev.nextTicketNumber + 1,
     }));
   };
 
@@ -217,7 +218,11 @@ export default function Dashboard() {
     };
 
     const updatedWinner = { ...winner, wins: winner.wins + 1 };
-    const loserPlayersToQueue = loser.players;
+    
+    // LOGICA ESTRICTA FIFO:
+    // Paso B: Los perdedores se ordenan internamente por su ticket de antigüedad
+    const losersSortedByTicket = [...loser.players].sort((a, b) => a.ticketNumber - b.ticketNumber);
+
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
 
     const newPlayerStats = { ...state.playerStats };
@@ -235,6 +240,9 @@ export default function Dashboard() {
         playerStats: newPlayerStats,
       };
 
+      // Paso D: Concatener perdedores ordenados al final de la banca intacta
+      const updatedQueue = [...prev.queue, ...losersSortedByTicket];
+
       if (prev.gameType === 'NORMAL') {
         if (updatedWinner.wins >= KING_THRESHOLD_WINS && totalPlayersInSystem >= KING_THRESHOLD_TOTAL_PLAYERS) {
           nextState = {
@@ -242,7 +250,7 @@ export default function Dashboard() {
             kingOnThrone: updatedWinner,
             teamA: null,
             teamB: null,
-            queue: [...prev.queue, ...loserPlayersToQueue],
+            queue: updatedQueue,
             gameType: 'ELIMINATOR'
           };
         } else {
@@ -250,7 +258,7 @@ export default function Dashboard() {
             ...nextState,
             teamA: updatedWinner,
             teamB: null, 
-            queue: [...prev.queue, ...loserPlayersToQueue],
+            queue: updatedQueue,
           };
         }
       } 
@@ -260,7 +268,7 @@ export default function Dashboard() {
           teamA: updatedWinner,
           teamB: prev.kingOnThrone, 
           kingOnThrone: null,
-          queue: [...prev.queue, ...loserPlayersToQueue],
+          queue: updatedQueue,
           gameType: 'FINAL'
         };
       }
@@ -270,7 +278,7 @@ export default function Dashboard() {
             ...nextState,
             teamA: updatedWinner,
             teamB: null,
-            queue: [...prev.queue, ...loserPlayersToQueue],
+            queue: updatedQueue,
             gameType: 'NORMAL'
           };
         } else {
@@ -280,7 +288,7 @@ export default function Dashboard() {
             kingOnThrone: newKing,
             teamA: null,
             teamB: null,
-            queue: [...prev.queue, ...loserPlayersToQueue],
+            queue: updatedQueue,
             gameType: 'ELIMINATOR'
           };
         }
@@ -344,7 +352,7 @@ export default function Dashboard() {
 
       {isDrafting && (
         <DraftModal 
-          pool={draftPool} 
+          pool={state.queue.slice(0, state.teamA ? 5 : 10)} 
           onCancel={() => setIsDrafting(false)} 
           onConfirm={finalizeDraft}
           gameType={state.gameType}

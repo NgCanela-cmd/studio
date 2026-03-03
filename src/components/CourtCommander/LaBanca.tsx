@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -6,7 +5,7 @@ import { Player } from '@/lib/game-types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, UserPlus, Clock, Users, ArrowRight, ChevronUp, ChevronDown, Pencil, Check, X } from 'lucide-react';
+import { Trash2, UserPlus, Clock, Users, ChevronUp, ChevronDown, Pencil, Check, X, Tag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -121,7 +120,12 @@ export default function LaBanca({ queue, onAddPlayer, onRemovePlayer, onUpdatePl
                       </div>
                     ) : (
                       <div className="flex flex-col">
-                        <p className="text-lg font-bold leading-tight">{player.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-lg font-bold leading-tight">{player.name}</p>
+                          <Badge variant="ghost" className="h-4 px-1 text-[8px] font-black opacity-40 flex gap-1">
+                            <Tag className="h-2 w-2" /> T-{player.ticketNumber}
+                          </Badge>
+                        </div>
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Clock className="h-3 w-3" />
                           <span>{new Date(player.registeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

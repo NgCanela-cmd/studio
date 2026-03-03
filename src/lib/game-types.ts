@@ -2,6 +2,7 @@ export type Player = {
   id: string;
   name: string;
   registeredAt: number;
+  ticketNumber: number;
 };
 
 export type Team = {
@@ -35,6 +36,7 @@ export type GameState = {
   gameType: GameType;
   matches: Match[];
   playerStats: Record<string, PlayerStat>;
+  nextTicketNumber: number;
 };
 
 export const KING_THRESHOLD_WINS = 2;
