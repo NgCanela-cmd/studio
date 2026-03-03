@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import LaCancha from './LaCancha';
 import LaBanca from './LaBanca';
-import { GameState, Player, Team, Match, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS } from '@/lib/game-types';
+import { GameState, Player, Team, Match, KING_THRESHOLD_WINS, KING_THRESHOLD_TOTAL_PLAYERS, MAX_GUESTS_ON_COURT } from '@/lib/game-types';
 import DraftModal from './DraftModal';
 import StatsModal from './StatsModal';
 import { useToast } from '@/hooks/use-toast';
@@ -45,7 +45,7 @@ export default function Dashboard() {
     });
   };
 
-  const addPlayer = (name: string) => {
+  const addPlayer = (name: string, isGuest: boolean = false) => {
     setState(prev => ({
       ...prev,
       queue: [...prev.queue, {
@@ -53,6 +53,7 @@ export default function Dashboard() {
         name,
         registeredAt: Date.now(),
         ticketNumber: prev.nextTicketNumber,
+        isGuest,
       }],
       nextTicketNumber: prev.nextTicketNumber + 1,
     }));
@@ -91,13 +92,36 @@ export default function Dashboard() {
     });
   };
 
+  const countGuests = (team: Team | null) => {
+    if (!team) return 0;
+    return team.players.filter(p => p.isGuest).length;
+  };
+
   const substitutePlayer = (teamId: string, currentPlayerId: string, substituteId: string) => {
+    const substitutePlayer = state.queue.find(p => p.id === substituteId);
+    if (!substitutePlayer) return;
+
+    // Verificar límite de invitados si el que entra es invitado y el que sale es miembro
+    if (substitutePlayer.isGuest) {
+      const currentPlayer = [...(state.teamA?.players || []), ...(state.teamB?.players || []), ...(state.kingOnThrone?.players || [])].find(p => p.id === currentPlayerId);
+      
+      if (currentPlayer && !currentPlayer.isGuest) {
+        const totalGuestsOnCourt = countGuests(state.teamA) + countGuests(state.teamB) + countGuests(state.kingOnThrone);
+        if (totalGuestsOnCourt >= MAX_GUESTS_ON_COURT) {
+          toast({
+            variant: "destructive",
+            title: "Límite de Invitados",
+            description: "No se pueden añadir más invitados. El límite es 2 en cancha.",
+          });
+          return;
+        }
+      }
+    }
+
     saveToHistory(state);
     setState(prev => {
       const subIndex = prev.queue.findIndex(p => p.id === substituteId);
-      if (subIndex === -1) return prev;
-
-      const substitutePlayer = prev.queue[subIndex];
+      const subPlayer = prev.queue[subIndex];
       let replacedPlayer: Player | null = null;
 
       const updateTeam = (team: Team | null) => {
@@ -105,7 +129,7 @@ export default function Dashboard() {
         const players = team.players.map(p => {
           if (p.id === currentPlayerId) {
             replacedPlayer = p;
-            return substitutePlayer;
+            return subPlayer;
           }
           return p;
         });
@@ -153,15 +177,43 @@ export default function Dashboard() {
   };
 
   const triggerDraft = (count: number) => {
-    if (state.queue.length < count) {
+    // Algoritmo de selección con salto (Skip Logic)
+    let maxGuestsAllowed = 0;
+    const isFirstMatch = !state.teamA && !state.teamB;
+
+    if (isFirstMatch) {
+      const totalMembersInQueue = state.queue.filter(p => !p.isGuest).length;
+      maxGuestsAllowed = totalMembersInQueue > 12 ? 0 : 2;
+    } else {
+      const guestsInA = countGuests(state.teamA);
+      const guestsInKing = countGuests(state.kingOnThrone);
+      maxGuestsAllowed = MAX_GUESTS_ON_COURT - (guestsInA + guestsInKing);
+    }
+
+    const pool: Player[] = [];
+    let currentGuestCount = 0;
+
+    for (const player of state.queue) {
+      if (pool.length < count) {
+        if (!player.isGuest) {
+          pool.push(player);
+        } else if (currentGuestCount < maxGuestsAllowed) {
+          pool.push(player);
+          currentGuestCount++;
+        }
+      }
+    }
+
+    if (pool.length < count) {
       toast({
         variant: "destructive",
-        title: "Jugadores insuficientes",
-        description: `Necesitas ${count} jugadores en la banca. Faltan ${count - state.queue.length}.`,
+        title: "Draft no disponible",
+        description: `No hay suficientes jugadores válidos siguiendo la regla de invitados (Faltan ${count - pool.length}).`,
       });
       return;
     }
-    setDraftPool(state.queue.slice(0, count));
+
+    setDraftPool(pool);
     setIsDrafting(true);
   };
 
@@ -187,11 +239,15 @@ export default function Dashboard() {
         wins: 0,
       };
 
+      // Eliminar solo a los jugadores seleccionados de la cola
+      const poolIds = new Set(draftPool.map(p => p.id));
+      const remainingQueue = prev.queue.filter(p => !poolIds.has(p.id));
+
       return {
         ...prev,
         teamA: finalTeamA,
         teamB: finalTeamB,
-        queue: prev.queue.slice(draftPool.length),
+        queue: remainingQueue,
       };
     });
     setIsDrafting(false);
@@ -219,6 +275,7 @@ export default function Dashboard() {
 
     const updatedWinner = { ...winner, wins: winner.wins + 1 };
     
+    // Paso B: Ordenar perdedores internamente por Ticket de Antigüedad
     const losersSortedByTicket = [...loser.players].sort((a, b) => a.ticketNumber - b.ticketNumber);
 
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
@@ -238,6 +295,7 @@ export default function Dashboard() {
         playerStats: newPlayerStats,
       };
 
+      // Paso D: Concatenar perdedores ordenados al final de la banca intacta
       const updatedQueue = [...prev.queue, ...losersSortedByTicket];
 
       if (prev.gameType === 'NORMAL') {
@@ -349,7 +407,7 @@ export default function Dashboard() {
 
       {isDrafting && (
         <DraftModal 
-          pool={state.queue.slice(0, state.teamA ? 5 : 10)} 
+          pool={draftPool} 
           onCancel={() => setIsDrafting(false)} 
           onConfirm={finalizeDraft}
           gameType={state.gameType}

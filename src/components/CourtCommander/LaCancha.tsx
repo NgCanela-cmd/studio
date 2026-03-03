@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -8,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw, BarChart3, Pencil, Check, X, ArrowLeftRight } from 'lucide-react';
+import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw, BarChart3, Pencil, Check, X, ArrowLeftRight, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LaCanchaProps {
@@ -76,7 +75,10 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
   };
 
   const renderPlayerRow = (p: Player, idx: number, teamId: string) => (
-    <div key={p.id} className="group flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 text-lg">
+    <div key={p.id} className={cn(
+      "group flex items-center justify-between p-3 rounded-xl border border-white/5 text-lg",
+      p.isGuest ? "bg-yellow-500/10 border-yellow-500/20" : "bg-secondary/30"
+    )}>
       <div className="flex items-center gap-3 flex-1 overflow-hidden">
         <span className="text-primary/40 font-black text-xs w-4 shrink-0">{idx + 1}</span>
         {editingPlayerId === p.id ? (
@@ -99,7 +101,10 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
             </Button>
           </div>
         ) : (
-          <span className="font-bold tracking-tight truncate">{p.name}</span>
+          <div className="flex flex-col">
+            <span className="font-bold tracking-tight truncate">{p.name}</span>
+            {p.isGuest && <span className="text-[8px] font-black text-yellow-600 uppercase flex items-center gap-0.5"><Star className="h-2 w-2 fill-yellow-600" /> Invitado</span>}
+          </div>
         )}
       </div>
       
@@ -131,7 +136,10 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
                         onClick={() => onSubstitutePlayer(teamId, p.id, benchPlayer.id)}
                         className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"
                       >
-                        <span className="font-bold text-sm truncate">{benchPlayer.name}</span>
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="font-bold text-sm truncate">{benchPlayer.name}</span>
+                          {benchPlayer.isGuest && <span className="text-[8px] text-yellow-600 font-black">INVITADO</span>}
+                        </div>
                         <ArrowLeftRight className="h-3 w-3 opacity-30" />
                       </button>
                     ))
@@ -209,7 +217,10 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
         
         <div className="flex flex-wrap justify-center gap-2 w-full">
           {kingOnThrone.players.map(p => (
-            <div key={p.id} className="group relative flex items-center bg-background/20 backdrop-blur-sm rounded-full px-4 py-1 border border-background/30">
+            <div key={p.id} className={cn(
+              "group relative flex items-center rounded-full px-4 py-1 border",
+              p.isGuest ? "bg-yellow-500/20 border-yellow-500/40" : "bg-background/20 border-background/30 backdrop-blur-sm"
+            )}>
               {editingPlayerId === p.id ? (
                 <div className="flex items-center gap-1">
                   <Input 
@@ -226,7 +237,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
                 </div>
               ) : (
                 <>
-                  <span className="text-[11px] font-black text-background uppercase">{p.name}</span>
+                  <span className="text-[11px] font-black text-background uppercase">{p.name} {p.isGuest && "⭐"}</span>
                   <div className="flex items-center gap-1 ml-2">
                     <Popover>
                       <PopoverTrigger asChild>
@@ -244,7 +255,10 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
                                 onClick={() => onSubstitutePlayer(kingOnThrone.id, p.id, benchPlayer.id)}
                                 className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"
                               >
-                                <span className="font-bold text-sm truncate">{benchPlayer.name}</span>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-sm truncate">{benchPlayer.name}</span>
+                                  {benchPlayer.isGuest && <span className="text-[8px] text-yellow-600 font-black">INVITADO</span>}
+                                </div>
                                 <ArrowLeftRight className="h-3 w-3 opacity-30" />
                               </button>
                             ))}

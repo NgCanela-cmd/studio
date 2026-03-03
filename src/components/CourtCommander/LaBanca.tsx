@@ -5,13 +5,15 @@ import { Player } from '@/lib/game-types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, UserPlus, Clock, Users, ChevronUp, ChevronDown, Pencil, Check, X, Tag } from 'lucide-react';
+import { Trash2, UserPlus, Clock, Users, ChevronUp, ChevronDown, Pencil, Check, X, Tag, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface LaBancaProps {
   queue: Player[];
-  onAddPlayer: (name: string) => void;
+  onAddPlayer: (name: string, isGuest: boolean) => void;
   onRemovePlayer: (id: string) => void;
   onUpdatePlayer: (id: string, name: string) => void;
   onMovePlayer: (id: string, direction: 'up' | 'down') => void;
@@ -21,14 +23,16 @@ interface LaBancaProps {
 
 export default function LaBanca({ queue, onAddPlayer, onRemovePlayer, onUpdatePlayer, onMovePlayer, isDrafting, totalInSystem }: LaBancaProps) {
   const [newName, setNewName] = useState('');
+  const [isGuest, setIsGuest] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newName.trim()) {
-      onAddPlayer(newName.trim());
+      onAddPlayer(newName.trim(), isGuest);
       setNewName('');
+      setIsGuest(false);
     }
   };
 
@@ -65,17 +69,30 @@ export default function LaBanca({ queue, onAddPlayer, onRemovePlayer, onUpdatePl
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-        <Input 
-          placeholder="Nombre del jugador..." 
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          className="bg-background border-border py-6 text-lg focus:ring-primary"
-        />
-        <Button type="submit" size="icon" className="h-[52px] w-[52px] gold-gradient">
-          <UserPlus />
-        </Button>
-      </form>
+      <div className="mb-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <Input 
+            placeholder="Nombre del jugador..." 
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="bg-background border-border py-6 text-lg focus:ring-primary"
+          />
+          <Button type="submit" size="icon" className="h-[52px] w-[52px] gold-gradient shrink-0">
+            <UserPlus />
+          </Button>
+        </form>
+        <div className="flex items-center justify-between bg-background/50 p-3 rounded-xl border border-border">
+          <div className="flex items-center gap-2">
+            <Star className={cn("h-4 w-4", isGuest ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground")} />
+            <Label htmlFor="guest-mode" className="text-xs font-black uppercase tracking-tighter">¿Es Invitado?</Label>
+          </div>
+          <Switch 
+            id="guest-mode"
+            checked={isGuest}
+            onCheckedChange={setIsGuest}
+          />
+        </div>
+      </div>
 
       <ScrollArea className="flex-1 -mx-2 px-2">
         <div className="space-y-3 pb-6">
@@ -90,11 +107,15 @@ export default function LaBanca({ queue, onAddPlayer, onRemovePlayer, onUpdatePl
                 key={player.id} 
                 className={cn(
                   "group flex items-center justify-between p-4 bg-background border border-border rounded-xl transition-all shadow-sm",
-                  editingId === player.id ? "border-primary ring-1 ring-primary/20" : "hover:border-primary/50"
+                  editingId === player.id ? "border-primary ring-1 ring-primary/20" : "hover:border-primary/50",
+                  player.isGuest && "border-yellow-500/30 bg-yellow-500/5"
                 )}
               >
                 <div className="flex items-center gap-4 flex-1">
-                  <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold shrink-0">
+                  <div className={cn(
+                    "h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                    player.isGuest ? "bg-yellow-500 text-background" : "bg-secondary"
+                  )}>
                     {idx + 1}
                   </div>
                   
@@ -122,6 +143,11 @@ export default function LaBanca({ queue, onAddPlayer, onRemovePlayer, onUpdatePl
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <p className="text-lg font-bold leading-tight">{player.name}</p>
+                          {player.isGuest && (
+                            <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30 h-4 px-1 text-[8px] font-black flex gap-0.5">
+                              <Star className="h-2 w-2 fill-yellow-600" /> GUEST
+                            </Badge>
+                          )}
                           <Badge variant="ghost" className="h-4 px-1 text-[8px] font-black opacity-40 flex gap-1">
                             <Tag className="h-2 w-2" /> T-{player.ticketNumber}
                           </Badge>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -7,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { generateAiTeamName } from '@/ai/flows/ai-team-name-generator';
-import { Sparkles, Loader2, ArrowRight, Lock, Users, TrendingUp } from 'lucide-react';
+import { Sparkles, Loader2, ArrowRight, Lock, Users, TrendingUp, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DraftModalProps {
@@ -20,9 +19,6 @@ interface DraftModalProps {
 
 export default function DraftModal({ pool, gameType, existingTeamA, onCancel, onConfirm }: DraftModalProps) {
   const isTeamALocked = !!existingTeamA;
-  
-  // Un equipo se considera recién "promovido" si acaba de ganar como retador
-  // Identificamos esto si wins es 1 o si el usuario quiere regenerar el nombre tras ganar
   const isNewlyPromoted = existingTeamA?.wins === 1;
   
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>(existingTeamA?.players || []);
@@ -30,7 +26,6 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const [teamBName, setTeamBName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Pool contiene 10 para nuevo partido o 5 para retador B
   const teamBPlayers = isTeamALocked 
     ? pool 
     : pool.filter(p => !teamAPlayers.find(tp => tp.id === p.id));
@@ -48,7 +43,6 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const handleGenerateNames = async () => {
     setIsGenerating(true);
     try {
-      // Si el equipo A es nuevo o acaba de ser promovido de B a A, generamos nombre Alpha
       if (!isTeamALocked || isNewlyPromoted) {
         const resultA = await generateAiTeamName({ 
           playerNames: teamAPlayers.map(p => p.name),
@@ -57,7 +51,6 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
         setTeamAName(resultA.suggestedNames[0]);
       }
       
-      // Siempre generar nombre para el equipo B (los retadores)
       if (teamBPlayers.length === 5) {
         const resultB = await generateAiTeamName({ 
           playerNames: teamBPlayers.map(p => p.name),
@@ -104,23 +97,23 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
         <div className="flex flex-col md:flex-row h-[550px]">
           <div className="w-full md:w-1/2 p-8 border-r border-border overflow-y-auto custom-scrollbar bg-card/20">
             <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-6">
-              {isTeamALocked ? "RETADORES DISPONIBLES" : "DRAFT DE JUGADORES"}
+              {isTeamALocked ? "RETADORES SELECCIONADOS" : "DRAFT DE JUGADORES"}
             </h3>
             
             <div className="grid grid-cols-1 gap-3">
               {pool.map((p) => {
                 const isSelectedForA = teamAPlayers.find(tp => tp.id === p.id);
                 return (
-                  <button
+                  <div
                     key={p.id}
-                    disabled={isTeamALocked}
-                    onClick={() => togglePlayer(p)}
                     className={cn(
                       "flex items-center justify-between p-5 rounded-2xl border-2 transition-all",
                       isSelectedForA 
                         ? "bg-primary/10 border-primary text-primary" 
-                        : "bg-secondary/20 border-border text-foreground hover:border-primary/50"
+                        : "bg-secondary/20 border-border text-foreground",
+                      p.isGuest && "border-yellow-500/30"
                     )}
+                    onClick={() => togglePlayer(p)}
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn(
@@ -129,9 +122,16 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                       )}>
                         {isSelectedForA ? "A" : "B"}
                       </div>
-                      <span className="font-black text-xl italic uppercase tracking-tighter">{p.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-black text-xl italic uppercase tracking-tighter">{p.name}</span>
+                        {p.isGuest && (
+                          <div className="flex items-center gap-1 text-[10px] font-black text-yellow-600">
+                            <Star className="h-3 w-3 fill-yellow-600" /> INVITADO
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -149,7 +149,9 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {teamAPlayers.map(p => (
-                    <Badge key={p.id} variant="secondary" className="font-bold text-[10px]">{p.name}</Badge>
+                    <Badge key={p.id} variant="secondary" className={cn("font-bold text-[10px]", p.isGuest && "text-yellow-600")}>
+                      {p.name} {p.isGuest && "⭐"}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -166,7 +168,9 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {teamBPlayers.map(p => (
-                    <Badge key={p.id} variant="secondary" className="font-bold text-[10px]">{p.name}</Badge>
+                    <Badge key={p.id} variant="secondary" className={cn("font-bold text-[10px]", p.isGuest && "text-yellow-600")}>
+                      {p.name} {p.isGuest && "⭐"}
+                    </Badge>
                   ))}
                 </div>
               </div>
