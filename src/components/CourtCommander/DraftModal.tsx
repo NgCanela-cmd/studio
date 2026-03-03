@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react';
@@ -8,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { generateAiTeamName } from '@/ai/flows/ai-team-name-generator';
-import { Sparkles, Loader2, Lock, Users, Star } from 'lucide-react';
+import { Sparkles, Lock, Users, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DraftModalProps {
@@ -24,10 +22,13 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
   const isTeamALocked = !!existingTeamA;
   const isNewlyPromoted = existingTeamA?.wins === 1;
   
+  // Nombres predeterminados solicitados
+  const DEFAULT_NAME_A = "Dominant Force";
+  const DEFAULT_NAME_B = "Hungry Challengers";
+
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>(existingTeamA?.players || []);
-  const [teamAName, setTeamAName] = useState(existingTeamA?.name || '');
-  const [teamBName, setTeamBName] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [teamAName, setTeamAName] = useState(existingTeamA?.name || DEFAULT_NAME_A);
+  const [teamBName, setTeamBName] = useState(DEFAULT_NAME_B);
 
   const teamBPlayers = isTeamALocked 
     ? pool 
@@ -42,25 +43,13 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
     }
   };
 
-  const handleAiWand = async (target: 'A' | 'B') => {
-    setIsGenerating(true);
-    try {
-      const players = target === 'A' ? teamAPlayers : teamBPlayers;
-      const theme = target === 'A' ? "Reyes dominantes, campeones" : "Retadores, hambrientos";
-      const result = await generateAiTeamName({ 
-        playerNames: players.map(p => p.name),
-        theme 
-      });
-      if (target === 'A') setTeamAName(result.suggestedNames[0]);
-      else setTeamBName(result.suggestedNames[0]);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsGenerating(false);
-    }
+  // Ahora el botón de varita simplemente restablece los nombres predeterminados sin usar IA
+  const handleResetName = (target: 'A' | 'B') => {
+    if (target === 'A') setTeamAName(DEFAULT_NAME_A);
+    else setTeamBName(DEFAULT_NAME_B);
   };
 
-  const canConfirm = teamAPlayers.length === 5 && teamBPlayers.length === 5 && teamAName && teamBName;
+  const canConfirm = teamAPlayers.length === 5 && teamBPlayers.length === 5 && teamAName.trim() !== '' && teamBName.trim() !== '';
 
   return (
     <Dialog open onOpenChange={onCancel}>
@@ -80,10 +69,9 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
           </DialogTitle>
         </DialogHeader>
 
-        {/* Scrollable body for both columns - Fixed for Laptop 13" and Mobile */}
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="flex flex-col md:flex-row h-full min-h-0">
-            {/* Left Column: Pool selection */}
+            {/* Columna Izquierda: Selección de jugadores */}
             <div className="w-full md:w-1/2 p-5 md:p-6 border-b md:border-b-0 md:border-r border-border bg-card/20 flex flex-col">
               <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4 shrink-0">
                 {isTeamALocked ? "RETADORES SELECCIONADOS" : "DRAFT DE JUGADORES"}
@@ -115,7 +103,7 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
               </div>
             </div>
 
-            {/* Right Column: Team settings */}
+            {/* Columna Derecha: Configuración de Equipos */}
             <div className="w-full md:w-1/2 p-5 md:p-6 bg-card/40 flex flex-col gap-5 md:gap-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -123,8 +111,8 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                     {isTeamALocked ? <Lock className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />} EQUIPO A (DEFENSOR)
                   </h4>
                   {(!isTeamALocked || isNewlyPromoted) && (
-                    <Button variant="ghost" size="icon" onClick={() => handleAiWand('A')} disabled={isGenerating} className="h-7 w-7">
-                      {isGenerating ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
+                    <Button variant="ghost" size="icon" onClick={() => handleResetName('A')} title="Restablecer nombre" className="h-7 w-7">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
                     </Button>
                   )}
                 </div>
@@ -149,8 +137,8 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
                   <h4 className="font-black uppercase tracking-tighter text-muted-foreground flex items-center gap-2 italic text-xs md:text-sm">
                     <Users className="h-3.5 w-3.5" /> EQUIPO B (RETADOR)
                   </h4>
-                  <Button variant="ghost" size="icon" onClick={() => handleAiWand('B')} disabled={isGenerating} className="h-7 w-7">
-                     {isGenerating ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
+                  <Button variant="ghost" size="icon" onClick={() => handleResetName('B')} title="Restablecer nombre" className="h-7 w-7">
+                     <Sparkles className="h-3.5 w-3.5 text-primary" />
                   </Button>
                 </div>
                 <Input 
@@ -171,15 +159,14 @@ export default function DraftModal({ pool, gameType, existingTeamA, onCancel, on
           </div>
         </ScrollArea>
 
-        {/* Footer always fixed at bottom */}
         <DialogFooter className="p-5 md:p-6 border-t border-border bg-card/80 shrink-0 flex flex-row justify-end gap-2.5">
           <Button variant="ghost" onClick={onCancel} className="font-black uppercase tracking-widest text-[9px] md:text-[10px] h-9">CANCELAR</Button>
           <Button 
-            disabled={!canConfirm || isGenerating}
+            disabled={!canConfirm}
             onClick={() => onConfirm(teamAPlayers, teamBPlayers, teamAName, teamBName)}
             className="px-5 md:px-8 gold-gradient font-black tracking-widest h-10 md:h-12 text-sm md:text-base rounded-xl flex-1 md:flex-none"
           >
-            {isGenerating ? "PREPARANDO..." : "LANZAR ENCUENTRO"}
+            LANZAR ENCUENTRO
           </Button>
         </DialogFooter>
       </DialogContent>
