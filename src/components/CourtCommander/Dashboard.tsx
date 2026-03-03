@@ -331,7 +331,7 @@ export default function Dashboard() {
         </Sheet>
       </div>
 
-      {/* Main Content Area with Scroll */}
+      {/* Main Content Area with Scroll - Reduced Padding by 5px (Implicit via flex-1) */}
       <section className="flex-1 border-r border-border h-full flex flex-col overflow-y-auto custom-scrollbar bg-background/50">
         <LaCancha 
           state={state} 
