@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -330,7 +331,8 @@ export default function Dashboard() {
         </Sheet>
       </div>
 
-      <section className="flex-1 border-r border-border h-full flex flex-col overflow-y-auto custom-scrollbar">
+      {/* Main Content Area with Scroll */}
+      <section className="flex-1 border-r border-border h-full flex flex-col overflow-y-auto custom-scrollbar bg-background/50">
         <LaCancha 
           state={state} 
           onDeclareWinner={declareWinner} 
@@ -344,6 +346,7 @@ export default function Dashboard() {
         />
       </section>
 
+      {/* Sidebar for Desktop */}
       <section className="hidden lg:flex w-1/3 xl:w-1/4 h-full flex-col overflow-hidden border-l border-border">
         <LaBanca 
           queue={state.queue} 

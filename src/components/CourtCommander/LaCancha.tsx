@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react';
@@ -63,22 +64,22 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
     const shouldShowDraft = (side === 'A' && isInitialGame) || (side === 'B' && teamA && !teamB);
 
     if (!shouldShowDraft && !isInitialGame) return (
-      <Card className="flex-1 border-dashed border-border/20 flex items-center justify-center bg-transparent min-h-[400px]">
-         <p className="text-muted-foreground italic text-xs uppercase tracking-widest opacity-20">Esperando draft</p>
+      <Card className="flex-1 border-dashed border-border/20 flex items-center justify-center bg-transparent min-h-[350px]">
+         <p className="text-muted-foreground italic text-xs uppercase tracking-widest opacity-20 text-center">Esperando retador</p>
       </Card>
     );
 
     return (
-      <Card className="flex-1 border-dashed border-2 flex items-center justify-center bg-transparent min-h-[400px]">
-        <div className="text-center p-8">
+      <Card className="flex-1 border-dashed border-2 flex items-center justify-center bg-transparent min-h-[350px]">
+        <div className="text-center p-6 md:p-8">
           <div className="relative inline-block mb-4">
-            <Users className="h-16 w-16 text-muted-foreground opacity-20" />
-            <UserPlus className="absolute -bottom-1 -right-1 h-8 w-8 text-primary" />
+            <Users className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground opacity-20" />
+            <UserPlus className="absolute -bottom-1 -right-1 h-6 w-6 md:h-8 md:w-8 text-primary" />
           </div>
-          <h3 className="text-lg font-bold uppercase tracking-widest mb-1 opacity-50">
-            {isInitialGame ? 'NUEVO PARTIDO' : 'RETADOR'}
+          <h3 className="text-base md:text-lg font-bold uppercase tracking-widest mb-2 opacity-50">
+            {isInitialGame ? 'NUEVO PARTIDO' : 'DRAFT RETADOR'}
           </h3>
-          <Button onClick={() => onTriggerDraft(requiredPlayers)} className="px-8 gold-gradient font-black tracking-widest h-12 shadow-xl">
+          <Button onClick={() => onTriggerDraft(requiredPlayers)} className="px-6 md:px-8 gold-gradient font-black tracking-widest h-12 shadow-xl text-sm md:text-base">
             REALIZAR DRAFT ({requiredPlayers})
           </Button>
         </div>
@@ -88,17 +89,17 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
 
   const renderPlayerRow = (p: Player, idx: number, teamId: string) => (
     <div key={p.id} className={cn(
-      "group flex items-center justify-between p-3 rounded-xl border border-white/5 text-lg",
+      "group flex items-center justify-between p-2 md:p-3 rounded-xl border border-white/5 text-base md:text-lg",
       p.isGuest ? "bg-yellow-500/10 border-yellow-500/20" : "bg-secondary/30"
     )}>
-      <div className="flex items-center gap-3 flex-1 overflow-hidden">
-        <span className="text-primary/40 font-black text-xs w-4 shrink-0">{idx + 1}</span>
+      <div className="flex items-center gap-2 md:gap-3 flex-1 overflow-hidden">
+        <span className="text-primary/40 font-black text-[10px] md:text-xs w-4 shrink-0">{idx + 1}</span>
         {editingPlayerId === p.id ? (
           <div className="flex items-center gap-2 flex-1">
             <Input 
               value={editValue} 
               onChange={(e) => setEditValue(e.target.value)} 
-              className="h-8 bg-background border-primary text-sm font-bold" 
+              className="h-8 bg-background border-primary text-xs font-bold" 
               autoFocus 
               onKeyDown={(e) => { if (e.key === 'Enter') saveEditingPlayer(teamId); if (e.key === 'Escape') cancelEditing(); }}
             />
@@ -106,8 +107,8 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
             <Button size="icon" variant="ghost" className="h-8 w-8 text-accent" onClick={cancelEditing}><X className="h-4 w-4" /></Button>
           </div>
         ) : (
-          <div className="flex flex-col">
-            <span className="font-bold tracking-tight truncate">{p.name}</span>
+          <div className="flex flex-col overflow-hidden">
+            <span className="font-bold tracking-tight truncate text-sm md:text-base">{p.name}</span>
             {p.isGuest && <span className="text-[8px] font-black text-yellow-600 uppercase flex items-center gap-0.5"><Star className="h-2 w-2 fill-yellow-600" /> Invitado</span>}
           </div>
         )}
@@ -117,7 +118,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
         <div className="flex items-center gap-1">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-green-500 transition-opacity"><ArrowLeftRight className="h-3 w-3" /></Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-green-500 transition-opacity"><ArrowLeftRight className="h-3 w-3" /></Button>
             </PopoverTrigger>
             <PopoverContent className="w-56 p-0 bg-card border-border shadow-2xl rounded-2xl overflow-hidden" align="end">
               <div className="p-3 border-b border-border bg-secondary/20"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sustituir por:</p></div>
@@ -133,7 +134,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
               </ScrollArea>
             </PopoverContent>
           </Popover>
-          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity" onClick={() => startEditingPlayer(p)}><Pencil className="h-3 w-3" /></Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity" onClick={() => startEditingPlayer(p)}><Pencil className="h-3 w-3" /></Button>
         </div>
       )}
     </div>
@@ -143,36 +144,36 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
     const isKing = team.id === kingOnThrone?.id || (gameType === 'FINAL' && side === 'B');
 
     return (
-      <Card className={cn("flex-1 relative overflow-hidden transition-all duration-300 min-h-[450px] flex flex-col", isKing ? "border-primary border-2 throne-glow" : "border-border")}>
-        <CardContent className="p-6 flex flex-col flex-1">
-          <div className="flex justify-between items-start mb-6 shrink-0">
+      <Card className={cn("flex-1 relative overflow-hidden transition-all duration-300 min-h-[400px] flex flex-col", isKing ? "border-primary border-2 throne-glow" : "border-border")}>
+        <CardContent className="p-4 md:p-6 flex flex-col flex-1">
+          <div className="flex justify-between items-start mb-4 md:mb-6 shrink-0">
             <div className="flex-1 overflow-hidden">
               {editingTeamId === team.id ? (
                 <div className="flex items-center gap-2 mb-1">
-                  <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8 font-black uppercase italic" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingTeam(); if (e.key === 'Escape') cancelEditing(); }} />
+                  <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8 font-black uppercase italic text-sm" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingTeam(); if (e.key === 'Escape') cancelEditing(); }} />
                   <Check className="h-4 w-4 text-primary cursor-pointer" onClick={saveEditingTeam} />
                 </div>
               ) : (
                 <div className="flex items-center gap-2 group/title">
-                  <h3 className="text-3xl font-black italic tracking-tighter uppercase text-primary leading-none truncate">{team.name}</h3>
-                  <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover/title:opacity-100 cursor-pointer" onClick={() => startEditingTeam(team)} />
+                  <h3 className="text-2xl md:text-3xl font-black italic tracking-tighter uppercase text-primary leading-none truncate max-w-[200px]">{team.name}</h3>
+                  <Pencil className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground opacity-0 group-hover/title:opacity-100 cursor-pointer" onClick={() => startEditingTeam(team)} />
                 </div>
               )}
-              <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm">
-                <Trophy className="h-4 w-4 shrink-0" />
+              <div className="flex items-center gap-2 text-muted-foreground font-bold text-xs md:text-sm mt-1">
+                <Trophy className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                 <span>{team.wins} {team.wins === 1 ? 'Victoria' : 'Victorias'}</span>
               </div>
             </div>
-            {isKing && <Crown className="h-10 w-10 text-primary shrink-0 animate-bounce" />}
+            {isKing && <Crown className="h-8 w-8 md:h-10 md:w-10 text-primary shrink-0 animate-bounce" />}
           </div>
 
-          <ScrollArea className="flex-1 mb-6 pr-2">
+          <div className="flex-1 mb-4 md:mb-6 overflow-y-auto pr-2 custom-scrollbar min-h-[200px]">
             <div className="space-y-2">
               {team.players.map((p, idx) => renderPlayerRow(p, idx, team.id))}
             </div>
-          </ScrollArea>
+          </div>
 
-          <Button className="w-full py-10 text-3xl font-black rounded-2xl gold-gradient shrink-0" onClick={() => onDeclareWinner(side)}>VICTORIA</Button>
+          <Button className="w-full py-6 md:py-10 text-2xl md:text-3xl font-black rounded-xl md:rounded-2xl gold-gradient shrink-0" onClick={() => onDeclareWinner(side)}>VICTORIA</Button>
         </CardContent>
       </Card>
     );
@@ -180,32 +181,35 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
 
   const renderThroneSection = () => {
     if (!kingOnThrone) return (
-      <div className="text-center"><Crown className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-2" /><p className="text-muted-foreground font-black uppercase tracking-widest text-xs opacity-50">Trono Disponible</p></div>
+      <div className="text-center py-6">
+        <Crown className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground opacity-20 mb-2" />
+        <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px] md:text-xs opacity-50">Trono Disponible</p>
+      </div>
     );
 
     return (
-      <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
-        <div className="flex items-center gap-4 mb-3">
-          <Crown className="h-10 w-10 text-background shrink-0" />
+      <div className="relative z-10 flex flex-col items-center w-full max-w-4xl py-4">
+        <div className="flex items-center gap-3 md:gap-4 mb-3">
+          <Crown className="h-8 w-8 md:h-10 md:w-10 text-background shrink-0" />
           {editingTeamId === kingOnThrone.id ? (
             <div className="flex items-center gap-2">
-              <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-10 text-2xl font-black italic text-background bg-primary border-background" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingTeam(); if (e.key === 'Escape') cancelEditing(); }} />
-              <Check className="h-6 w-6 text-background cursor-pointer" onClick={saveEditingTeam} />
+              <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8 md:h-10 text-xl md:text-2xl font-black italic text-background bg-primary border-background" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingTeam(); if (e.key === 'Escape') cancelEditing(); }} />
+              <Check className="h-5 w-5 md:h-6 md:w-6 text-background cursor-pointer" onClick={saveEditingTeam} />
             </div>
           ) : (
             <div className="flex items-center gap-2 group/throne">
-              <h2 className="text-3xl md:text-4xl font-black text-background uppercase tracking-tighter italic text-center">REY: {kingOnThrone.name}</h2>
-              <Pencil className="h-6 w-6 text-background/50 opacity-0 group-hover/throne:opacity-100 cursor-pointer" onClick={() => startEditingTeam(kingOnThrone)} />
+              <h2 className="text-2xl md:text-4xl font-black text-background uppercase tracking-tighter italic text-center truncate max-w-[280px] md:max-w-none">REY: {kingOnThrone.name}</h2>
+              <Pencil className="h-5 w-5 md:h-6 md:w-6 text-background/50 opacity-0 group-hover/throne:opacity-100 cursor-pointer" onClick={() => startEditingTeam(kingOnThrone)} />
             </div>
           )}
         </div>
-        <div className="flex flex-wrap justify-center gap-2 w-full">
+        <div className="flex flex-wrap justify-center gap-2 w-full px-4">
           {kingOnThrone.players.map(p => (
-            <div key={p.id} className={cn("group relative flex items-center rounded-full px-4 py-1 border", p.isGuest ? "bg-yellow-500/20 border-yellow-500/40" : "bg-background/20 border-background/30 backdrop-blur-sm")}>
+            <div key={p.id} className={cn("group relative flex items-center rounded-full px-3 md:px-4 py-1 border", p.isGuest ? "bg-yellow-500/20 border-yellow-500/40" : "bg-background/20 border-background/30 backdrop-blur-sm")}>
               {editingPlayerId === p.id ? (
-                <div className="flex items-center gap-1"><Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-6 w-24 bg-background text-[10px] font-black" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingPlayer(kingOnThrone.id); if (e.key === 'Escape') cancelEditing(); }} /><Check className="h-3 w-3 text-background cursor-pointer" onClick={() => saveEditingPlayer(kingOnThrone.id)} /></div>
+                <div className="flex items-center gap-1"><Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-5 md:h-6 w-20 md:w-24 bg-background text-[10px] font-black" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingPlayer(kingOnThrone.id); if (e.key === 'Escape') cancelEditing(); }} /><Check className="h-3 w-3 text-background cursor-pointer" onClick={() => saveEditingPlayer(kingOnThrone.id)} /></div>
               ) : (
-                <><span className="text-[11px] font-black text-background uppercase">{p.name} {p.isGuest && "⭐"}</span><div className="flex items-center gap-1 ml-2"><Popover><PopoverTrigger asChild><ArrowLeftRight className="h-3 w-3 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" /></PopoverTrigger><PopoverContent className="w-56 p-0 bg-card border-border shadow-2xl rounded-2xl overflow-hidden" align="center"><div className="p-3 border-b border-border bg-secondary/20"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-left">Sustituir por:</p></div><ScrollArea className="h-48"><div className="p-1">{queue.map((benchPlayer) => (<button key={benchPlayer.id} onClick={() => onSubstitutePlayer(kingOnThrone.id, p.id, benchPlayer.id)} className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"><div className="flex flex-col"><span className="font-bold text-sm truncate">{benchPlayer.name}</span>{benchPlayer.isGuest && <span className="text-[8px] text-yellow-600 font-black">INVITADO</span>}</div><ArrowLeftRight className="h-3 w-3 opacity-30" /></button>))}</div></ScrollArea></PopoverContent></Popover><Pencil className="h-3 w-3 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEditingPlayer(p)}/></div></>
+                <><span className="text-[10px] md:text-[11px] font-black text-background uppercase">{p.name} {p.isGuest && "⭐"}</span><div className="flex items-center gap-1 ml-2"><Popover><PopoverTrigger asChild><ArrowLeftRight className="h-3 w-3 text-background/50 hover:text-background cursor-pointer md:opacity-0 md:group-hover:opacity-100 transition-opacity" /></PopoverTrigger><PopoverContent className="w-56 p-0 bg-card border-border shadow-2xl rounded-2xl overflow-hidden" align="center"><div className="p-3 border-b border-border bg-secondary/20"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-left">Sustituir por:</p></div><ScrollArea className="h-48"><div className="p-1">{queue.map((benchPlayer) => (<button key={benchPlayer.id} onClick={() => onSubstitutePlayer(kingOnThrone.id, p.id, benchPlayer.id)} className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"><div className="flex flex-col"><span className="font-bold text-sm truncate">{benchPlayer.name}</span>{benchPlayer.isGuest && <span className="text-[8px] text-yellow-600 font-black">INVITADO</span>}</div><ArrowLeftRight className="h-3 w-3 opacity-30" /></button>))}</div></ScrollArea></PopoverContent></Popover><Pencil className="h-3 w-3 text-background/50 hover:text-background cursor-pointer md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => startEditingPlayer(p)}/></div></>
               )}
             </div>
           ))}
@@ -215,22 +219,36 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
   };
 
   return (
-    <div className="p-4 md:p-6 flex flex-col h-full gap-6 max-w-7xl mx-auto w-full">
-      <header className="flex flex-col sm:flex-row items-center justify-between bg-card/50 p-4 rounded-2xl border border-border gap-4">
+    <div className="p-4 md:p-6 flex flex-col min-h-full gap-6 max-w-7xl mx-auto w-full">
+      <header className="flex flex-col sm:flex-row items-center justify-between bg-card/50 p-4 rounded-2xl border border-border gap-4 shrink-0">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shrink-0"><Swords className="text-background h-7 w-7" /></div>
-          <div><h1 className="text-2xl font-black uppercase tracking-tighter text-primary leading-none">La Cancha</h1><p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">GESTIÓN DE BATALLAS EN VIVO</p></div>
+          <div className="h-10 w-10 md:h-12 md:w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shrink-0"><Swords className="text-background h-6 w-6 md:h-7 md:w-7" /></div>
+          <div><h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter text-primary leading-none">La Cancha</h1><p className="text-muted-foreground text-[8px] md:text-[10px] font-bold tracking-widest uppercase">GESTIÓN DE BATALLAS EN VIVO</p></div>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          <Button variant="ghost" size="sm" onClick={onOpenStats} className="text-muted-foreground hover:text-primary font-black italic tracking-tighter gap-2"><BarChart3 className="h-4 w-4" />ESTADÍSTICAS</Button>
-          {canUndo && <Button variant="outline" size="sm" onClick={onUndo} className="border-primary/50 text-primary hover:bg-primary/10 font-black italic tracking-tighter gap-2"><RotateCcw className="h-4 w-4" />DESHACER</Button>}
-          <div className="px-4 py-2 bg-accent/20 border border-accent/30 rounded-full flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-accent animate-pulse" /><span className="text-accent font-black tracking-tighter uppercase text-xs">{gameType}</span></div>
+          <Button variant="ghost" size="sm" onClick={onOpenStats} className="text-muted-foreground hover:text-primary font-black italic tracking-tighter gap-2 text-[10px] md:text-sm"><BarChart3 className="h-4 w-4" />ESTADÍSTICAS</Button>
+          {canUndo && <Button variant="outline" size="sm" onClick={onUndo} className="border-primary/50 text-primary hover:bg-primary/10 font-black italic tracking-tighter gap-2 text-[10px] md:text-sm"><RotateCcw className="h-4 w-4" />DESHACER</Button>}
+          <div className="px-3 md:px-4 py-1.5 md:py-2 bg-accent/20 border border-accent/30 rounded-full flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-accent animate-pulse" /><span className="text-accent font-black tracking-tighter uppercase text-[10px] md:text-xs">{gameType}</span></div>
         </div>
       </header>
-      <div className={cn("rounded-3xl p-6 md:p-8 transition-all duration-500 min-h-[160px] flex items-center justify-center overflow-hidden relative border-2", kingOnThrone ? "gold-gradient throne-glow border-primary/50" : "bg-card/30 border-dashed border-border")}>{renderThroneSection()}</div>
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch overflow-hidden">
+
+      {/* Throne Section */}
+      <div className={cn("rounded-3xl transition-all duration-500 min-h-[140px] md:min-h-[160px] flex items-center justify-center overflow-hidden relative border-2 shrink-0", kingOnThrone ? "gold-gradient throne-glow border-primary/50" : "bg-card/30 border-dashed border-border")}>
+        {renderThroneSection()}
+      </div>
+
+      {/* Teams Container - Stacked on mobile, side-by-side on large screens */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch pb-10">
         {teamA ? renderTeamCard(teamA, 'A') : renderEmptySlot('A')}
-        <div className="flex flex-row lg:flex-col items-center justify-center gap-4 shrink-0"><div className="h-px w-12 lg:w-px lg:h-12 bg-border" /><div className="h-16 w-16 rounded-full bg-card border-2 border-border flex items-center justify-center shadow-inner z-10 shrink-0"><span className="font-black text-2xl italic tracking-tighter text-muted-foreground">VS</span></div><div className="h-px w-12 lg:w-px lg:h-12 bg-border" /></div>
+        
+        <div className="flex flex-row lg:flex-col items-center justify-center gap-4 shrink-0">
+          <div className="h-px w-10 lg:w-px lg:h-10 bg-border" />
+          <div className="h-12 w-12 md:h-16 md:w-16 rounded-full bg-card border-2 border-border flex items-center justify-center shadow-inner z-10 shrink-0">
+            <span className="font-black text-xl md:text-2xl italic tracking-tighter text-muted-foreground">VS</span>
+          </div>
+          <div className="h-px w-10 lg:w-px lg:h-10 bg-border" />
+        </div>
+
         {teamB ? renderTeamCard(teamB, 'B') : renderEmptySlot('B')}
       </div>
     </div>
