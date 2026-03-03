@@ -1,11 +1,12 @@
 
 "use client"
 
-import React from 'react';
-import { GameState, Team } from '@/lib/game-types';
+import React, { useState } from 'react';
+import { GameState, Team, Player } from '@/lib/game-types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw, BarChart3 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Crown, Trophy, Swords, Users, UserPlus, RotateCcw, BarChart3, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LaCanchaProps {
@@ -14,11 +15,30 @@ interface LaCanchaProps {
   onTriggerDraft: (count: number) => void;
   onUndo: () => void;
   onOpenStats: () => void;
+  onUpdatePlayer: (teamId: string, playerId: string, newName: string) => void;
   canUndo: boolean;
 }
 
-export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, onOpenStats, canUndo }: LaCanchaProps) {
+export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, onOpenStats, onUpdatePlayer, canUndo }: LaCanchaProps) {
   const { teamA, teamB, kingOnThrone, gameType } = state;
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const startEditing = (player: Player) => {
+    setEditingPlayerId(player.id);
+    setEditValue(player.name);
+  };
+
+  const saveEditing = (teamId: string) => {
+    if (editingPlayerId && editValue.trim()) {
+      onUpdatePlayer(teamId, editingPlayerId, editValue.trim());
+      setEditingPlayerId(null);
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingPlayerId(null);
+  };
 
   const renderEmptySlot = (side: 'A' | 'B') => {
     const isInitialGame = !teamA && !teamB;
@@ -62,23 +82,54 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
       )}>
         <CardContent className="p-6 flex flex-col h-full">
           <div className="flex justify-between items-start mb-6">
-            <div>
-              <h3 className="text-3xl font-black italic tracking-tighter mb-1 uppercase text-primary leading-none">{team.name}</h3>
+            <div className="flex-1">
+              <h3 className="text-3xl font-black italic tracking-tighter mb-1 uppercase text-primary leading-none truncate">{team.name}</h3>
               <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm">
-                <Trophy className="h-4 w-4" />
+                <Trophy className="h-4 w-4 shrink-0" />
                 <span>{team.wins} {team.wins === 1 ? 'Victoria' : 'Victorias'}</span>
               </div>
             </div>
-            {isKing && <Crown className="h-10 w-10 text-primary animate-bounce" />}
+            {isKing && <Crown className="h-10 w-10 text-primary shrink-0 animate-bounce" />}
           </div>
 
           <div className="space-y-2 mb-8 flex-1">
             {team.players.map((p, idx) => (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 text-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-primary/40 font-black text-xs w-4">{idx + 1}</span>
-                  <span className="font-bold tracking-tight">{p.name}</span>
+              <div key={p.id} className="group flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 text-lg">
+                <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                  <span className="text-primary/40 font-black text-xs w-4 shrink-0">{idx + 1}</span>
+                  {editingPlayerId === p.id ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input 
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-8 bg-background border-primary text-sm font-bold"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEditing(team.id);
+                          if (e.key === 'Escape') cancelEditing();
+                        }}
+                      />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => saveEditing(team.id)}>
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-accent" onClick={cancelEditing}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="font-bold tracking-tight truncate">{p.name}</span>
+                  )}
                 </div>
+                {editingPlayerId !== p.id && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity"
+                    onClick={() => startEditing(p)}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -94,11 +145,63 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
     );
   };
 
+  const renderThroneSection = () => {
+    if (!kingOnThrone) {
+      return (
+        <div className="text-center">
+          <Crown className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-2" />
+          <p className="text-muted-foreground font-black uppercase tracking-widest text-xs opacity-50">Trono Disponible</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
+        <div className="flex items-center gap-4 mb-3">
+          <Crown className="h-10 w-10 text-background shrink-0" />
+          <h2 className="text-3xl md:text-4xl font-black text-background uppercase tracking-tighter italic text-center">Rey del Trono</h2>
+        </div>
+        <p className="text-background font-black text-2xl uppercase tracking-widest mb-4 italic text-center">{kingOnThrone.name}</p>
+        
+        {/* Lista de jugadores del trono editables */}
+        <div className="flex flex-wrap justify-center gap-2 w-full">
+          {kingOnThrone.players.map(p => (
+            <div key={p.id} className="group relative flex items-center bg-background/20 backdrop-blur-sm rounded-full px-4 py-1 border border-background/30">
+              {editingPlayerId === p.id ? (
+                <div className="flex items-center gap-1">
+                  <Input 
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="h-6 w-24 bg-background text-[10px] font-black"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveEditing(kingOnThrone.id);
+                      if (e.key === 'Escape') cancelEditing();
+                    }}
+                  />
+                  <Check className="h-3 w-3 text-background cursor-pointer" onClick={() => saveEditing(kingOnThrone.id)} />
+                </div>
+              ) : (
+                <>
+                  <span className="text-[11px] font-black text-background uppercase">{p.name}</span>
+                  <Pencil 
+                    className="h-3 w-3 ml-2 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" 
+                    onClick={() => startEditing(p)}
+                  />
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="p-6 flex flex-col h-full gap-6">
-      <header className="flex items-center justify-between bg-card/50 p-4 rounded-2xl border border-border">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+    <div className="p-4 md:p-6 flex flex-col h-full gap-6 max-w-7xl mx-auto w-full">
+      <header className="flex flex-col sm:flex-row items-center justify-between bg-card/50 p-4 rounded-2xl border border-border gap-4">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shrink-0">
             <Swords className="text-background h-7 w-7" />
           </div>
           <div>
@@ -109,7 +212,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-center">
           <Button 
             variant="ghost" 
             size="sm" 
@@ -140,23 +243,10 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
       </header>
 
       <div className={cn(
-        "rounded-3xl p-8 transition-all duration-500 min-h-[160px] flex items-center justify-center overflow-hidden relative border-2",
+        "rounded-3xl p-6 md:p-8 transition-all duration-500 min-h-[160px] flex items-center justify-center overflow-hidden relative border-2",
         kingOnThrone ? "gold-gradient throne-glow border-primary/50" : "bg-card/30 border-dashed border-border"
       )}>
-        {kingOnThrone ? (
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="flex items-center gap-4 mb-3">
-              <Crown className="h-10 w-10 text-background" />
-              <h2 className="text-4xl font-black text-background uppercase tracking-tighter italic">Rey del Trono</h2>
-            </div>
-            <p className="text-background font-black text-2xl uppercase tracking-widest">{kingOnThrone.name}</p>
-          </div>
-        ) : (
-          <div className="text-center">
-            <Crown className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-2" />
-            <p className="text-muted-foreground font-black uppercase tracking-widest text-xs opacity-50">Trono Disponible</p>
-          </div>
-        )}
+        {renderThroneSection()}
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch">
@@ -164,7 +254,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
         
         <div className="flex flex-row lg:flex-col items-center justify-center gap-4">
           <div className="h-px w-full lg:w-px lg:h-full bg-border" />
-          <div className="h-16 w-16 rounded-full bg-card border-2 border-border flex items-center justify-center shadow-inner relative z-10">
+          <div className="h-16 w-16 rounded-full bg-card border-2 border-border flex items-center justify-center shadow-inner relative z-10 shrink-0">
             <span className="font-black text-2xl italic tracking-tighter text-muted-foreground">VS</span>
           </div>
           <div className="h-px w-full lg:w-px lg:h-full bg-border" />

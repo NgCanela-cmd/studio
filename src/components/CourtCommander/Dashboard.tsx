@@ -8,6 +8,9 @@ import { GameState, Player, Team, Match, GameType, KING_THRESHOLD_WINS, KING_THR
 import DraftModal from './DraftModal';
 import StatsModal from './StatsModal';
 import { useToast } from '@/hooks/use-toast';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Users, Menu } from 'lucide-react';
 
 const INITIAL_STATE: GameState = {
   queue: [],
@@ -68,6 +71,25 @@ export default function Dashboard() {
     }));
   };
 
+  const updateInGamePlayer = (teamId: string, playerId: string, newName: string) => {
+    setState(prev => {
+      const updateTeamPlayers = (team: Team | null) => {
+        if (!team || team.id !== teamId) return team;
+        return {
+          ...team,
+          players: team.players.map(p => p.id === playerId ? { ...p, name: newName } : p)
+        };
+      };
+
+      return {
+        ...prev,
+        teamA: updateTeamPlayers(prev.teamA),
+        teamB: updateTeamPlayers(prev.teamB),
+        kingOnThrone: updateTeamPlayers(prev.kingOnThrone),
+      };
+    });
+  };
+
   const movePlayer = (id: string, direction: 'up' | 'down') => {
     setState(prev => {
       const index = prev.queue.findIndex(p => p.id === id);
@@ -78,7 +100,6 @@ export default function Dashboard() {
       
       if (targetIndex < 0 || targetIndex >= newQueue.length) return prev;
       
-      // Swap elements
       [newQueue[index], newQueue[targetIndex]] = [newQueue[targetIndex], newQueue[index]];
       
       return { ...prev, queue: newQueue };
@@ -229,19 +250,42 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-background">
-      <section className="w-full md:w-3/5 border-r border-border h-full flex flex-col overflow-y-auto custom-scrollbar">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
+      {/* Botón flotante para abrir la banca en móvil (aprox 8 pulgadas o menos) */}
+      <div className="lg:hidden fixed bottom-6 right-6 z-50">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button size="icon" className="h-16 w-16 rounded-full gold-gradient shadow-2xl">
+              <Users className="h-8 w-8 text-background" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="p-0 w-full sm:max-w-md bg-background border-l border-border">
+            <LaBanca 
+              queue={state.queue} 
+              onAddPlayer={addPlayer} 
+              onRemovePlayer={removePlayer} 
+              onUpdatePlayer={updatePlayer}
+              onMovePlayer={movePlayer}
+              isDrafting={isDrafting}
+              totalInSystem={state.queue.length + (state.teamA ? 5 : 0) + (state.teamB ? 5 : 0) + (state.kingOnThrone ? 5 : 0)}
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      <section className="flex-1 border-r border-border h-full flex flex-col overflow-y-auto custom-scrollbar">
         <LaCancha 
           state={state} 
           onDeclareWinner={declareWinner} 
           onTriggerDraft={triggerDraft}
           onUndo={undo}
           onOpenStats={() => setIsStatsOpen(true)}
+          onUpdatePlayer={updateInGamePlayer}
           canUndo={history.length > 0}
         />
       </section>
 
-      <section className="w-full md:w-2/5 h-full flex flex-col overflow-hidden">
+      <section className="hidden lg:flex w-1/3 xl:w-1/4 h-full flex-col overflow-hidden border-l border-border">
         <LaBanca 
           queue={state.queue} 
           onAddPlayer={addPlayer} 
