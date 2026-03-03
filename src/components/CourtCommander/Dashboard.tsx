@@ -219,8 +219,6 @@ export default function Dashboard() {
 
     const updatedWinner = { ...winner, wins: winner.wins + 1 };
     
-    // LOGICA ESTRICTA FIFO:
-    // Paso B: Los perdedores se ordenan internamente por su ticket de antigüedad
     const losersSortedByTicket = [...loser.players].sort((a, b) => a.ticketNumber - b.ticketNumber);
 
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
@@ -240,7 +238,6 @@ export default function Dashboard() {
         playerStats: newPlayerStats,
       };
 
-      // Paso D: Concatener perdedores ordenados al final de la banca intacta
       const updatedQueue = [...prev.queue, ...losersSortedByTicket];
 
       if (prev.gameType === 'NORMAL') {
