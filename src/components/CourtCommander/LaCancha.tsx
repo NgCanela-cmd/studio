@@ -17,29 +17,44 @@ interface LaCanchaProps {
   onUndo: () => void;
   onOpenStats: () => void;
   onUpdatePlayer: (teamId: string, playerId: string, newName: string) => void;
+  onUpdateTeamName: (teamId: string, newName: string) => void;
   onSubstitutePlayer: (teamId: string, currentPlayerId: string, substituteId: string) => void;
   canUndo: boolean;
 }
 
-export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, onOpenStats, onUpdatePlayer, onSubstitutePlayer, canUndo }: LaCanchaProps) {
+export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUndo, onOpenStats, onUpdatePlayer, onUpdateTeamName, onSubstitutePlayer, canUndo }: LaCanchaProps) {
   const { teamA, teamB, kingOnThrone, gameType, queue } = state;
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const startEditing = (player: Player) => {
+  const startEditingPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setEditValue(player.name);
   };
 
-  const saveEditing = (teamId: string) => {
+  const startEditingTeam = (team: Team) => {
+    setEditingTeamId(team.id);
+    setEditValue(team.name);
+  };
+
+  const saveEditingPlayer = (teamId: string) => {
     if (editingPlayerId && editValue.trim()) {
       onUpdatePlayer(teamId, editingPlayerId, editValue.trim());
       setEditingPlayerId(null);
     }
   };
 
+  const saveEditingTeam = () => {
+    if (editingTeamId && editValue.trim()) {
+      onUpdateTeamName(editingTeamId, editValue.trim());
+      setEditingTeamId(null);
+    }
+  };
+
   const cancelEditing = () => {
     setEditingPlayerId(null);
+    setEditingTeamId(null);
   };
 
   const renderEmptySlot = (side: 'A' | 'B') => {
@@ -63,10 +78,7 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
           <h3 className="text-lg font-bold uppercase tracking-widest mb-1 opacity-50">
             {isInitialGame ? 'NUEVO PARTIDO' : 'RETADOR'}
           </h3>
-          <Button 
-            onClick={() => onTriggerDraft(requiredPlayers)}
-            className="px-8 gold-gradient font-black tracking-widest h-12 shadow-xl"
-          >
+          <Button onClick={() => onTriggerDraft(requiredPlayers)} className="px-8 gold-gradient font-black tracking-widest h-12 shadow-xl">
             REALIZAR DRAFT ({requiredPlayers})
           </Button>
         </div>
@@ -84,21 +96,14 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
         {editingPlayerId === p.id ? (
           <div className="flex items-center gap-2 flex-1">
             <Input 
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="h-8 bg-background border-primary text-sm font-bold"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveEditing(teamId);
-                if (e.key === 'Escape') cancelEditing();
-              }}
+              value={editValue} 
+              onChange={(e) => setEditValue(e.target.value)} 
+              className="h-8 bg-background border-primary text-sm font-bold" 
+              autoFocus 
+              onKeyDown={(e) => { if (e.key === 'Enter') saveEditingPlayer(teamId); if (e.key === 'Escape') cancelEditing(); }}
             />
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => saveEditing(teamId)}>
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-accent" onClick={cancelEditing}>
-              <X className="h-4 w-4" />
-            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500" onClick={() => saveEditingPlayer(teamId)}><Check className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-accent" onClick={cancelEditing}><X className="h-4 w-4" /></Button>
           </div>
         ) : (
           <div className="flex flex-col">
@@ -110,53 +115,25 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
       
       {editingPlayerId !== p.id && (
         <div className="flex items-center gap-1">
-          {/* Sustitución Popover */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-green-500 transition-opacity"
-              >
-                <ArrowLeftRight className="h-3 w-3" />
-              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-green-500 transition-opacity"><ArrowLeftRight className="h-3 w-3" /></Button>
             </PopoverTrigger>
             <PopoverContent className="w-56 p-0 bg-card border-border shadow-2xl rounded-2xl overflow-hidden" align="end">
-              <div className="p-3 border-b border-border bg-secondary/20">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sustituir por:</p>
-              </div>
+              <div className="p-3 border-b border-border bg-secondary/20"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sustituir por:</p></div>
               <ScrollArea className="h-48">
                 <div className="p-1">
-                  {queue.length === 0 ? (
-                    <p className="p-4 text-xs text-center text-muted-foreground italic">No hay jugadores en la banca</p>
-                  ) : (
-                    queue.map((benchPlayer) => (
-                      <button
-                        key={benchPlayer.id}
-                        onClick={() => onSubstitutePlayer(teamId, p.id, benchPlayer.id)}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"
-                      >
-                        <div className="flex flex-col overflow-hidden">
-                          <span className="font-bold text-sm truncate">{benchPlayer.name}</span>
-                          {benchPlayer.isGuest && <span className="text-[8px] text-yellow-600 font-black">INVITADO</span>}
-                        </div>
-                        <ArrowLeftRight className="h-3 w-3 opacity-30" />
-                      </button>
-                    ))
-                  )}
+                  {queue.length === 0 ? <p className="p-4 text-xs text-center text-muted-foreground italic">No hay jugadores en la banca</p> : queue.map((benchPlayer) => (
+                    <button key={benchPlayer.id} onClick={() => onSubstitutePlayer(teamId, p.id, benchPlayer.id)} className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between">
+                      <div className="flex flex-col overflow-hidden"><span className="font-bold text-sm truncate">{benchPlayer.name}</span>{benchPlayer.isGuest && <span className="text-[8px] text-yellow-600 font-black">INVITADO</span>}</div>
+                      <ArrowLeftRight className="h-3 w-3 opacity-30" />
+                    </button>
+                  ))}
                 </div>
               </ScrollArea>
             </PopoverContent>
           </Popover>
-
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity"
-            onClick={() => startEditing(p)}
-          >
-            <Pencil className="h-3 w-3" />
-          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity" onClick={() => startEditingPlayer(p)}><Pencil className="h-3 w-3" /></Button>
         </div>
       )}
     </div>
@@ -166,14 +143,21 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
     const isKing = team.id === kingOnThrone?.id || (gameType === 'FINAL' && side === 'B');
 
     return (
-      <Card className={cn(
-        "flex-1 relative overflow-hidden transition-all duration-300 min-h-[400px]",
-        isKing ? "border-primary border-2 throne-glow" : "border-border"
-      )}>
-        <CardContent className="p-6 flex flex-col h-full">
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex-1">
-              <h3 className="text-3xl font-black italic tracking-tighter mb-1 uppercase text-primary leading-none truncate">{team.name}</h3>
+      <Card className={cn("flex-1 relative overflow-hidden transition-all duration-300 min-h-[450px] flex flex-col", isKing ? "border-primary border-2 throne-glow" : "border-border")}>
+        <CardContent className="p-6 flex flex-col flex-1">
+          <div className="flex justify-between items-start mb-6 shrink-0">
+            <div className="flex-1 overflow-hidden">
+              {editingTeamId === team.id ? (
+                <div className="flex items-center gap-2 mb-1">
+                  <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8 font-black uppercase italic" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingTeam(); if (e.key === 'Escape') cancelEditing(); }} />
+                  <Check className="h-4 w-4 text-primary cursor-pointer" onClick={saveEditingTeam} />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group/title">
+                  <h3 className="text-3xl font-black italic tracking-tighter uppercase text-primary leading-none truncate">{team.name}</h3>
+                  <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover/title:opacity-100 cursor-pointer" onClick={() => startEditingTeam(team)} />
+                </div>
+              )}
               <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm">
                 <Trophy className="h-4 w-4 shrink-0" />
                 <span>{team.wins} {team.wins === 1 ? 'Victoria' : 'Victorias'}</span>
@@ -182,96 +166,46 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
             {isKing && <Crown className="h-10 w-10 text-primary shrink-0 animate-bounce" />}
           </div>
 
-          <div className="space-y-2 mb-8 flex-1">
-            {team.players.map((p, idx) => renderPlayerRow(p, idx, team.id))}
-          </div>
+          <ScrollArea className="flex-1 mb-6 pr-2">
+            <div className="space-y-2">
+              {team.players.map((p, idx) => renderPlayerRow(p, idx, team.id))}
+            </div>
+          </ScrollArea>
 
-          <Button 
-            className="w-full py-10 text-3xl font-black rounded-2xl gold-gradient"
-            onClick={() => onDeclareWinner(side)}
-          >
-            VICTORIA
-          </Button>
+          <Button className="w-full py-10 text-3xl font-black rounded-2xl gold-gradient shrink-0" onClick={() => onDeclareWinner(side)}>VICTORIA</Button>
         </CardContent>
       </Card>
     );
   };
 
   const renderThroneSection = () => {
-    if (!kingOnThrone) {
-      return (
-        <div className="text-center">
-          <Crown className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-2" />
-          <p className="text-muted-foreground font-black uppercase tracking-widest text-xs opacity-50">Trono Disponible</p>
-        </div>
-      );
-    }
+    if (!kingOnThrone) return (
+      <div className="text-center"><Crown className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-2" /><p className="text-muted-foreground font-black uppercase tracking-widest text-xs opacity-50">Trono Disponible</p></div>
+    );
 
     return (
       <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
         <div className="flex items-center gap-4 mb-3">
           <Crown className="h-10 w-10 text-background shrink-0" />
-          <h2 className="text-3xl md:text-4xl font-black text-background uppercase tracking-tighter italic text-center">Rey del Trono</h2>
+          {editingTeamId === kingOnThrone.id ? (
+            <div className="flex items-center gap-2">
+              <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-10 text-2xl font-black italic text-background bg-primary border-background" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingTeam(); if (e.key === 'Escape') cancelEditing(); }} />
+              <Check className="h-6 w-6 text-background cursor-pointer" onClick={saveEditingTeam} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 group/throne">
+              <h2 className="text-3xl md:text-4xl font-black text-background uppercase tracking-tighter italic text-center">REY: {kingOnThrone.name}</h2>
+              <Pencil className="h-6 w-6 text-background/50 opacity-0 group-hover/throne:opacity-100 cursor-pointer" onClick={() => startEditingTeam(kingOnThrone)} />
+            </div>
+          )}
         </div>
-        <p className="text-background font-black text-2xl uppercase tracking-widest mb-4 italic text-center">{kingOnThrone.name}</p>
-        
         <div className="flex flex-wrap justify-center gap-2 w-full">
           {kingOnThrone.players.map(p => (
-            <div key={p.id} className={cn(
-              "group relative flex items-center rounded-full px-4 py-1 border",
-              p.isGuest ? "bg-yellow-500/20 border-yellow-500/40" : "bg-background/20 border-background/30 backdrop-blur-sm"
-            )}>
+            <div key={p.id} className={cn("group relative flex items-center rounded-full px-4 py-1 border", p.isGuest ? "bg-yellow-500/20 border-yellow-500/40" : "bg-background/20 border-background/30 backdrop-blur-sm")}>
               {editingPlayerId === p.id ? (
-                <div className="flex items-center gap-1">
-                  <Input 
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="h-6 w-24 bg-background text-[10px] font-black"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveEditing(kingOnThrone.id);
-                      if (e.key === 'Escape') cancelEditing();
-                    }}
-                  />
-                  <Check className="h-3 w-3 text-background cursor-pointer" onClick={() => saveEditing(kingOnThrone.id)} />
-                </div>
+                <div className="flex items-center gap-1"><Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-6 w-24 bg-background text-[10px] font-black" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') saveEditingPlayer(kingOnThrone.id); if (e.key === 'Escape') cancelEditing(); }} /><Check className="h-3 w-3 text-background cursor-pointer" onClick={() => saveEditingPlayer(kingOnThrone.id)} /></div>
               ) : (
-                <>
-                  <span className="text-[11px] font-black text-background uppercase">{p.name} {p.isGuest && "⭐"}</span>
-                  <div className="flex items-center gap-1 ml-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <ArrowLeftRight className="h-3 w-3 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </PopoverTrigger>
-                      <PopoverContent className="w-56 p-0 bg-card border-border shadow-2xl rounded-2xl overflow-hidden" align="center">
-                        <div className="p-3 border-b border-border bg-secondary/20">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-left">Sustituir por:</p>
-                        </div>
-                        <ScrollArea className="h-48">
-                          <div className="p-1">
-                            {queue.map((benchPlayer) => (
-                              <button
-                                key={benchPlayer.id}
-                                onClick={() => onSubstitutePlayer(kingOnThrone.id, p.id, benchPlayer.id)}
-                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"
-                              >
-                                <div className="flex flex-col">
-                                  <span className="font-bold text-sm truncate">{benchPlayer.name}</span>
-                                  {benchPlayer.isGuest && <span className="text-[8px] text-yellow-600 font-black">INVITADO</span>}
-                                </div>
-                                <ArrowLeftRight className="h-3 w-3 opacity-30" />
-                              </button>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      </PopoverContent>
-                    </Popover>
-                    <Pencil 
-                      className="h-3 w-3 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" 
-                      onClick={() => startEditing(p)}
-                    />
-                  </div>
-                </>
+                <><span className="text-[11px] font-black text-background uppercase">{p.name} {p.isGuest && "⭐"}</span><div className="flex items-center gap-1 ml-2"><Popover><PopoverTrigger asChild><ArrowLeftRight className="h-3 w-3 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" /></PopoverTrigger><PopoverContent className="w-56 p-0 bg-card border-border shadow-2xl rounded-2xl overflow-hidden" align="center"><div className="p-3 border-b border-border bg-secondary/20"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-left">Sustituir por:</p></div><ScrollArea className="h-48"><div className="p-1">{queue.map((benchPlayer) => (<button key={benchPlayer.id} onClick={() => onSubstitutePlayer(kingOnThrone.id, p.id, benchPlayer.id)} className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-between"><div className="flex flex-col"><span className="font-bold text-sm truncate">{benchPlayer.name}</span>{benchPlayer.isGuest && <span className="text-[8px] text-yellow-600 font-black">INVITADO</span>}</div><ArrowLeftRight className="h-3 w-3 opacity-30" /></button>))}</div></ScrollArea></PopoverContent></Popover><Pencil className="h-3 w-3 text-background/50 hover:text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEditingPlayer(p)}/></div></>
               )}
             </div>
           ))}
@@ -284,65 +218,19 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
     <div className="p-4 md:p-6 flex flex-col h-full gap-6 max-w-7xl mx-auto w-full">
       <header className="flex flex-col sm:flex-row items-center justify-between bg-card/50 p-4 rounded-2xl border border-border gap-4">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shrink-0">
-            <Swords className="text-background h-7 w-7" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black uppercase tracking-tighter text-primary leading-none">La Cancha</h1>
-            <p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">
-              GESTIÓN DE BATALLAS EN VIVO
-            </p>
-          </div>
+          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shrink-0"><Swords className="text-background h-7 w-7" /></div>
+          <div><h1 className="text-2xl font-black uppercase tracking-tighter text-primary leading-none">La Cancha</h1><p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">GESTIÓN DE BATALLAS EN VIVO</p></div>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onOpenStats}
-            className="text-muted-foreground hover:text-primary font-black italic tracking-tighter gap-2"
-          >
-            <BarChart3 className="h-4 w-4" />
-            ESTADÍSTICAS
-          </Button>
-          {canUndo && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onUndo}
-              className="border-primary/50 text-primary hover:bg-primary/10 font-black italic tracking-tighter gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              DESHACER
-            </Button>
-          )}
-          <div className="px-4 py-2 bg-accent/20 border border-accent/30 rounded-full flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-            <span className="text-accent font-black tracking-tighter uppercase text-xs">
-              {gameType}
-            </span>
-          </div>
+          <Button variant="ghost" size="sm" onClick={onOpenStats} className="text-muted-foreground hover:text-primary font-black italic tracking-tighter gap-2"><BarChart3 className="h-4 w-4" />ESTADÍSTICAS</Button>
+          {canUndo && <Button variant="outline" size="sm" onClick={onUndo} className="border-primary/50 text-primary hover:bg-primary/10 font-black italic tracking-tighter gap-2"><RotateCcw className="h-4 w-4" />DESHACER</Button>}
+          <div className="px-4 py-2 bg-accent/20 border border-accent/30 rounded-full flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-accent animate-pulse" /><span className="text-accent font-black tracking-tighter uppercase text-xs">{gameType}</span></div>
         </div>
       </header>
-
-      <div className={cn(
-        "rounded-3xl p-6 md:p-8 transition-all duration-500 min-h-[160px] flex items-center justify-center overflow-hidden relative border-2",
-        kingOnThrone ? "gold-gradient throne-glow border-primary/50" : "bg-card/30 border-dashed border-border"
-      )}>
-        {renderThroneSection()}
-      </div>
-
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch">
+      <div className={cn("rounded-3xl p-6 md:p-8 transition-all duration-500 min-h-[160px] flex items-center justify-center overflow-hidden relative border-2", kingOnThrone ? "gold-gradient throne-glow border-primary/50" : "bg-card/30 border-dashed border-border")}>{renderThroneSection()}</div>
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch overflow-hidden">
         {teamA ? renderTeamCard(teamA, 'A') : renderEmptySlot('A')}
-        
-        <div className="flex flex-row lg:flex-col items-center justify-center gap-4">
-          <div className="h-px w-full lg:w-px lg:h-full bg-border" />
-          <div className="h-16 w-16 rounded-full bg-card border-2 border-border flex items-center justify-center shadow-inner relative z-10 shrink-0">
-            <span className="font-black text-2xl italic tracking-tighter text-muted-foreground">VS</span>
-          </div>
-          <div className="h-px w-full lg:w-px lg:h-full bg-border" />
-        </div>
-
+        <div className="flex flex-row lg:flex-col items-center justify-center gap-4 shrink-0"><div className="h-px w-12 lg:w-px lg:h-12 bg-border" /><div className="h-16 w-16 rounded-full bg-card border-2 border-border flex items-center justify-center shadow-inner z-10 shrink-0"><span className="font-black text-2xl italic tracking-tighter text-muted-foreground">VS</span></div><div className="h-px w-12 lg:w-px lg:h-12 bg-border" /></div>
         {teamB ? renderTeamCard(teamB, 'B') : renderEmptySlot('B')}
       </div>
     </div>

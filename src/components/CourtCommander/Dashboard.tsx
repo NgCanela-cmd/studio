@@ -92,6 +92,15 @@ export default function Dashboard() {
     });
   };
 
+  const updateTeamName = (teamId: string, newName: string) => {
+    setState(prev => {
+      if (prev.teamA?.id === teamId) return { ...prev, teamA: { ...prev.teamA, name: newName } };
+      if (prev.teamB?.id === teamId) return { ...prev, teamB: { ...prev.teamB, name: newName } };
+      if (prev.kingOnThrone?.id === teamId) return { ...prev, kingOnThrone: { ...prev.kingOnThrone, name: newName } };
+      return prev;
+    });
+  };
+
   const countGuests = (team: Team | null) => {
     if (!team) return 0;
     return team.players.filter(p => p.isGuest).length;
@@ -101,10 +110,8 @@ export default function Dashboard() {
     const substitutePlayer = state.queue.find(p => p.id === substituteId);
     if (!substitutePlayer) return;
 
-    // Verificar límite de invitados si el que entra es invitado y el que sale es miembro
     if (substitutePlayer.isGuest) {
       const currentPlayer = [...(state.teamA?.players || []), ...(state.teamB?.players || []), ...(state.kingOnThrone?.players || [])].find(p => p.id === currentPlayerId);
-      
       if (currentPlayer && !currentPlayer.isGuest) {
         const totalGuestsOnCourt = countGuests(state.teamA) + countGuests(state.teamB) + countGuests(state.kingOnThrone);
         if (totalGuestsOnCourt >= MAX_GUESTS_ON_COURT) {
@@ -164,20 +171,15 @@ export default function Dashboard() {
     setState(prev => {
       const index = prev.queue.findIndex(p => p.id === id);
       if (index === -1) return prev;
-      
       const newQueue = [...prev.queue];
       const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      
       if (targetIndex < 0 || targetIndex >= newQueue.length) return prev;
-      
       [newQueue[index], newQueue[targetIndex]] = [newQueue[targetIndex], newQueue[index]];
-      
       return { ...prev, queue: newQueue };
     });
   };
 
   const triggerDraft = (count: number) => {
-    // Algoritmo de selección con salto (Skip Logic)
     let maxGuestsAllowed = 0;
     const isFirstMatch = !state.teamA && !state.teamB;
 
@@ -220,12 +222,7 @@ export default function Dashboard() {
   const finalizeDraft = (teamAPlayers: Player[], teamBPlayers: Player[], teamAName: string, teamBName: string) => {
     saveToHistory(state);
     setState(prev => {
-      const existingTeamA = prev.teamA;
-      const finalTeamA: Team = existingTeamA ? { 
-        ...existingTeamA, 
-        name: teamAName,
-        players: teamAPlayers 
-      } : {
+      const finalTeamA: Team = prev.teamA ? { ...prev.teamA, name: teamAName, players: teamAPlayers } : {
         id: Math.random().toString(36).substr(2, 9),
         name: teamAName,
         players: teamAPlayers,
@@ -239,7 +236,6 @@ export default function Dashboard() {
         wins: 0,
       };
 
-      // Eliminar solo a los jugadores seleccionados de la cola
       const poolIds = new Set(draftPool.map(p => p.id));
       const remainingQueue = prev.queue.filter(p => !poolIds.has(p.id));
 
@@ -257,7 +253,6 @@ export default function Dashboard() {
   const declareWinner = (winnerSide: 'A' | 'B') => {
     const currentTeamA = state.teamA;
     const currentTeamB = state.teamB;
-    
     if (!currentTeamA || !currentTeamB) return;
 
     const winner = winnerSide === 'A' ? currentTeamA : currentTeamB;
@@ -274,87 +269,38 @@ export default function Dashboard() {
     };
 
     const updatedWinner = { ...winner, wins: winner.wins + 1 };
-    
-    // Paso B: Ordenar perdedores internamente por Ticket de Antigüedad
     const losersSortedByTicket = [...loser.players].sort((a, b) => a.ticketNumber - b.ticketNumber);
 
     const totalPlayersInSystem = state.queue.length + 10 + (state.kingOnThrone ? 5 : 0);
-
     const newPlayerStats = { ...state.playerStats };
     winner.players.forEach(player => {
-      if (!newPlayerStats[player.id]) {
-        newPlayerStats[player.id] = { id: player.id, name: player.name, wins: 0 };
-      }
+      if (!newPlayerStats[player.id]) newPlayerStats[player.id] = { id: player.id, name: player.name, wins: 0 };
       newPlayerStats[player.id].wins += 1;
     });
 
     setState(prev => {
-      let nextState = {
-        ...prev,
-        matches: [matchRecord, ...prev.matches],
-        playerStats: newPlayerStats,
-      };
-
-      // Paso D: Concatenar perdedores ordenados al final de la banca intacta
+      let nextState = { ...prev, matches: [matchRecord, ...prev.matches], playerStats: newPlayerStats };
       const updatedQueue = [...prev.queue, ...losersSortedByTicket];
 
       if (prev.gameType === 'NORMAL') {
         if (updatedWinner.wins >= KING_THRESHOLD_WINS && totalPlayersInSystem >= KING_THRESHOLD_TOTAL_PLAYERS) {
-          nextState = {
-            ...nextState,
-            kingOnThrone: updatedWinner,
-            teamA: null,
-            teamB: null,
-            queue: updatedQueue,
-            gameType: 'ELIMINATOR'
-          };
+          nextState = { ...nextState, kingOnThrone: updatedWinner, teamA: null, teamB: null, queue: updatedQueue, gameType: 'ELIMINATOR' };
         } else {
-          nextState = {
-            ...nextState,
-            teamA: updatedWinner,
-            teamB: null, 
-            queue: updatedQueue,
-          };
+          nextState = { ...nextState, teamA: updatedWinner, teamB: null, queue: updatedQueue };
         }
-      } 
-      else if (prev.gameType === 'ELIMINATOR') {
-        nextState = {
-          ...nextState,
-          teamA: updatedWinner,
-          teamB: prev.kingOnThrone, 
-          kingOnThrone: null,
-          queue: updatedQueue,
-          gameType: 'FINAL'
-        };
-      }
-      else if (prev.gameType === 'FINAL') {
+      } else if (prev.gameType === 'ELIMINATOR') {
+        nextState = { ...nextState, teamA: updatedWinner, teamB: prev.kingOnThrone, kingOnThrone: null, queue: updatedQueue, gameType: 'FINAL' };
+      } else if (prev.gameType === 'FINAL') {
         if (winnerSide === 'B') {
-          nextState = {
-            ...nextState,
-            teamA: updatedWinner,
-            teamB: null,
-            queue: updatedQueue,
-            gameType: 'NORMAL'
-          };
+          nextState = { ...nextState, teamA: updatedWinner, teamB: null, queue: updatedQueue, gameType: 'NORMAL' };
         } else {
-          const newKing = { ...updatedWinner };
-          nextState = {
-            ...nextState,
-            kingOnThrone: newKing,
-            teamA: null,
-            teamB: null,
-            queue: updatedQueue,
-            gameType: 'ELIMINATOR'
-          };
+          nextState = { ...nextState, kingOnThrone: updatedWinner, teamA: null, teamB: null, queue: updatedQueue, gameType: 'ELIMINATOR' };
         }
       }
       return nextState;
     });
 
-    toast({
-      title: "Victoria Registrada",
-      description: `¡${winner.name} ha ganado!`,
-    });
+    toast({ title: "Victoria Registrada", description: `¡${winner.name} ha ganado!` });
   };
 
   return (
@@ -392,6 +338,7 @@ export default function Dashboard() {
           onUndo={undo}
           onOpenStats={() => setIsStatsOpen(true)}
           onUpdatePlayer={updateInGamePlayer}
+          onUpdateTeamName={updateTeamName}
           onSubstitutePlayer={substitutePlayer}
           canUndo={history.length > 0}
         />

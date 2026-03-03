@@ -43,5 +43,4 @@ export type GameState = {
 export const KING_THRESHOLD_WINS = 2;
 export const KING_THRESHOLD_TOTAL_PLAYERS = 20;
 export const TEAM_SIZE = 5;
-export const ELIMINATOR_POOL_SIZE = 10;
 export const MAX_GUESTS_ON_COURT = 2;
