@@ -256,3 +256,5 @@ export default function LaCancha({ state, onDeclareWinner, onTriggerDraft, onUnd
     </div>
   );
 }
+
+//

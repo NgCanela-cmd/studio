@@ -379,3 +379,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+//Ajuste de funcionalidad
